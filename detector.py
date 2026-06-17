@@ -93,7 +93,6 @@ class SatelliteDetector:
             # Vehicle detection is intentionally disabled for now because the COCO model
             # is unreliable for small overhead vehicles in satellite imagery.
             # This will be replaced later with a satellite/aerial vehicle model.
-            # additionally the tiles make it
 
         return detections
 
