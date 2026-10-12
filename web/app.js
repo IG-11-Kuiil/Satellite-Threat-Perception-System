@@ -1,6 +1,8 @@
 'use strict';
 const $ = (id) => document.getElementById(id);
 let mode = 'comparison', busy = false, result = null, view = 'annotated';
+let healthState = null;
+const profileLabels = {aerial:'YOLO11s-OBB / DOTA v1',aerial_large:'YOLO26m-OBB / DOTA v1',general:'YOLOv8s / COCO'};
 const files = { first: null, second: null }, urls = { first: null, second: null };
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 function showError(message) { $('error').textContent = message; $('error').hidden = !message; }
@@ -108,6 +110,7 @@ $('run-button').addEventListener('click', async () => {
   form.append('proximity', Number($('proximity').value) / 100);
   form.append('tiled', $('tiled').checked); form.append('vehicles', $('vehicles').checked);
   form.append('resolution', $('resolution').value);
+  form.append('model_profile', $('model-profile').value);
   try { const job = await api('/api/analyze', { method: 'POST', body: form }); await refreshHistory(); await watchJob(job.id); }
   catch (error) { showError(error.message || 'Could not reach the local analysis engine.'); }
   finally { setBusy(false); $('progress-panel').hidden = true; refreshHistory(); checkHealth(); }
@@ -122,7 +125,12 @@ function metric(label, value, detail, amber = false) {
 }
 function sceneName(label) { return label === 'scene' ? 'Source scene' : `${label[0].toUpperCase()}${label.slice(1)} scene`; }
 function renderResult(data) {
+  if (!busy) chooseMode(data.mode);
   result = data; view = 'annotated';
+  const resultUrl = new URL(window.location.href);
+  resultUrl.searchParams.set('run', data.id);
+  window.history.replaceState(null, '', resultUrl);
+  $('result-model').textContent = data.model;
   $('empty-results').hidden = true; $('results').hidden = false;
   $('result-meta').textContent = `RUN ${data.id.slice(0, 8).toUpperCase()} / ${new Date(data.created_at).toLocaleString()}`;
   const scenes = Object.values(data.scenes), latest = data.scenes.after || data.scenes.scene;
@@ -164,6 +172,7 @@ function renderImages() {
     button.append(image); button.addEventListener('click', () => { $('dialog-image').src = image.src; $('dialog-title').textContent = `${sceneName(label).toUpperCase()} / ${view.toUpperCase()}`; $('image-dialog').showModal(); });
     const details = element('div', 'scene-metrics');
     details.append(element('span', '', `${scene.aircraft_count} AIRCRAFT`), element('span', '', `${scene.spatial.group_count} GROUPS`), element('span', '', `${scene.activity_level} ACTIVITY`));
+    if (scene.duplicates_removed !== undefined) details.append(element('span', '', `${scene.duplicates_removed} DUPLICATE / INVALID CANDIDATES REMOVED`));
     card.append(header, button, details); container.append(card);
   }
 }
@@ -209,11 +218,21 @@ async function openRun(id) {
 $('mobile-history').addEventListener('change', event => openRun(event.target.value));
 $('mobile-method').addEventListener('click', () => $('method-dialog').showModal());
 async function checkHealth() {
-  try { const health = await api('/api/health'); $('system-status').textContent = 'ENGINE ONLINE'; $('system-dot').classList.remove('offline'); $('model-status').textContent = health.model_loaded ? 'Detector loaded and ready.' : health.weights_cached ? 'Weights cached. Loads on first run.' : 'Model downloads on first analysis.'; }
+  try { healthState = await api('/api/health'); $('system-status').textContent = 'ENGINE ONLINE'; $('system-dot').classList.remove('offline'); updateProfile(); }
   catch { $('system-status').textContent = 'ENGINE OFFLINE'; $('system-dot').classList.add('offline'); $('model-status').textContent = 'Start the local server to analyze imagery.'; }
 }
+function updateProfile() {
+  const key = $('model-profile').value, profile = healthState?.model_profiles?.[key];
+  $('selected-model').textContent = profileLabels[key];
+  $('engine-model').textContent = profileLabels[key];
+  $('profile-hint').textContent = key === 'aerial' ? 'Recommended aerial detector. Trained on DOTA v1.' : key === 'aerial_large' ? 'Larger aerial model. May produce false positives on text or watermarks; review carefully.' : 'Legacy COCO detector. Can miss unusual overhead aircraft.';
+  if (healthState) $('model-status').textContent = profile?.loaded ? 'Detector loaded and ready.' : profile?.cached ? 'Weights cached. Loads on next run.' : 'Model downloads on first use.';
+}
+$('model-profile').addEventListener('change', () => { updateProfile(); });
 $('method-button').addEventListener('click', () => $('method-dialog').showModal());
 document.querySelectorAll('.close-dialog').forEach(button => button.addEventListener('click', () => button.closest('dialog').close()));
 document.querySelectorAll('dialog').forEach(dialog => dialog.addEventListener('click', event => { if (event.target === dialog) { const rect = dialog.getBoundingClientRect(); if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) dialog.close(); } }));
 function updateClock() { $('clock').textContent = new Date().toLocaleTimeString([], { hour12: false }) + ' LOCAL'; }
 updateClock(); setInterval(updateClock, 1000); checkHealth(); refreshHistory(); setInterval(checkHealth, 30000);
+const requestedRun = new URLSearchParams(window.location.search).get('run');
+if (requestedRun) openRun(requestedRun);

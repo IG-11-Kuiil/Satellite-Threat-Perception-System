@@ -15,21 +15,29 @@ MAX_UPLOAD_BYTES = 20 * 1024 * 1024
 MAX_IMAGE_PIXELS = 16_000_000
 MAX_IMAGE_SIDE = 4096
 LOW_CONFIDENCE_THRESHOLD = 0.40
+MODEL_PROFILES = {
+    "aerial": {"weights": "yolo11s-obb.pt", "label": "YOLO11s-OBB / DOTA v1", "dataset": "DOTA v1"},
+    "aerial_large": {"weights": "yolo26m-obb.pt", "label": "YOLO26m-OBB / DOTA v1", "dataset": "DOTA v1"},
+    "general": {"weights": "yolov8s.pt", "label": "YOLOv8s / COCO", "dataset": "COCO"},
+}
 
 
 @dataclass(frozen=True)
 class AnalysisSettings:
-    aircraft_confidence: float = 0.18
+    model_profile: str = "aerial"
+    aircraft_confidence: float = 0.40
     vehicle_confidence: float = 0.30
     iou_threshold: float = 0.35
     tile_size: int = 640
     tile_stride: int = 320
-    inference_size: int = 640
+    inference_size: int = 1024
     tiled: bool = True
     enable_vehicle_detection: bool = False
     cluster_distance_fraction: float = 0.08
 
     def __post_init__(self):
+        if self.model_profile not in MODEL_PROFILES:
+            raise ValueError("Unknown detector profile.")
         for name in ("aircraft_confidence", "vehicle_confidence", "iou_threshold"):
             if not 0.05 <= getattr(self, name) <= 0.95:
                 raise ValueError(f"{name} must be between 0.05 and 0.95.")
@@ -37,8 +45,8 @@ class AnalysisSettings:
             raise ValueError("Proximity distance must be between 1% and 50% of the image diagonal.")
         if not 128 <= self.tile_size <= 1280 or not 1 <= self.tile_stride <= self.tile_size:
             raise ValueError("Tile size must be 128-1280 and stride must not exceed tile size.")
-        if self.inference_size not in (640, 1280):
-            raise ValueError("Inference size must be 640 or 1280.")
+        if self.inference_size not in (640, 1024, 1280):
+            raise ValueError("Inference size must be 640, 1024, or 1280.")
 
     def to_dict(self):
         return asdict(self)

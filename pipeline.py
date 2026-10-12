@@ -3,9 +3,10 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 import cv2
+import numpy as np
 from activity import compute_activity_level, generate_summary
 from change_detection import compare_scenes, generate_change_summary
-from config import AnalysisSettings, LOW_CONFIDENCE_THRESHOLD
+from config import AnalysisSettings, LOW_CONFIDENCE_THRESHOLD, MODEL_PROFILES
 from detector import read_image
 from spatial import analyze_spatial
 
@@ -19,7 +20,11 @@ def analyze_image(detector, image_path, settings=None, progress=None, filename=N
     spatial = analyze_spatial(detections, result["width"], result["height"], settings.cluster_distance_fraction)
     low_count = sum(d["class"] == "aircraft" and d["confidence"] < LOW_CONFIDENCE_THRESHOLD for d in detections)
     activity = compute_activity_level(aircraft_count, vehicle_count)
-    warnings = ["General-purpose COCO model; overhead aircraft may be missed or misclassified."]
+    dataset = result.get("dataset", MODEL_PROFILES[settings.model_profile]["dataset"])
+    warnings = [f"{dataset}-trained detector; aircraft may still be missed or misclassified. Aircraft type is not identified."]
+    truncated = sum(d.get("edge_truncated", False) for d in detections)
+    if truncated:
+        warnings.append(f"{truncated} detection(s) touch an internal tile edge and have no matching complete box; check for partial aircraft.")
     if low_count:
         warnings.append(f"{low_count} aircraft detection(s) have confidence below 40%.")
     if not aircraft_count:
@@ -49,7 +54,10 @@ def save_annotation(analysis, output_path):
         if detection["confidence"] < LOW_CONFIDENCE_THRESHOLD:
             color = (65, 175, 255)
         label = f"{detection['id']} {detection['confidence']:.0%}"
-        cv2.rectangle(image, (x1, y1), (x2, y2), color, thickness)
+        if detection.get("polygon"):
+            cv2.polylines(image, [np.round(detection["polygon"]).astype(np.int32)], True, color, thickness, cv2.LINE_AA)
+        else:
+            cv2.rectangle(image, (x1, y1), (x2, y2), color, thickness)
         (tw, th), baseline = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, font_scale, 1)
         tx = max(0, min(x1, analysis["width"]-tw-8))
         ty = max(th+7, y1-5)
@@ -64,7 +72,7 @@ def save_annotation(analysis, output_path):
 def build_report(result):
     lines = ["SATELLITE THREAT PERCEPTION SYSTEM", "IMAGERY ANALYSIS REPORT", "",
              f"Run: {result['id']}", f"Created: {result['created_at']}",
-             f"Mode: {result['mode']}", "Model: YOLOv8s / COCO", ""]
+             f"Mode: {result['mode']}", f"Model: {result['model']}", ""]
     for label, scene in result["scenes"].items():
         lines += [f"{label.upper()} SCENE", f"File: {scene['filename']}",
                   f"Dimensions: {scene['width']} x {scene['height']} px",
@@ -74,6 +82,7 @@ def build_report(result):
                   f"Isolated aircraft: {scene['spatial']['isolated_count']}",
                   f"Nearby pairs: {len(scene['clusters'])}", f"Activity: {scene['activity_level']}",
                   f"Low-confidence aircraft: {scene['low_confidence_count']}", scene["summary"], ""]
+        lines.append(f"Duplicate/invalid candidates removed: {scene.get('duplicates_removed', 0)}")
         for detection in scene["detections"]:
             lines.append(f"  {detection['id']} | {detection['class']} | {detection['confidence']:.1%} | bbox {detection['bbox']}")
         lines += ["", "Scene caveats:"]+[f"- {warning}" for warning in scene["warnings"]]+[""]
@@ -112,7 +121,8 @@ def execute_analysis(detector, inputs, run_dir, run_id, settings=None, progress=
         scene.pop("image_path")
         scenes[label] = scene
     result = {"id": run_id, "created_at": created_at or datetime.now(timezone.utc).isoformat(),
-              "mode": "comparison" if len(inputs) == 2 else "single", "model": "YOLOv8s / COCO",
+              "mode": "comparison" if len(inputs) == 2 else "single",
+              "model": next(iter(scenes.values())).get("model",MODEL_PROFILES[settings.model_profile]["label"]),
               "settings": settings.to_dict(), "scenes": scenes, "change": None}
     if len(inputs) == 2:
         result["change"] = compare_scenes(scenes["before"], scenes["after"])

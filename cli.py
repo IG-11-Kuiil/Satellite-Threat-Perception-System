@@ -4,27 +4,28 @@ import json
 import uuid
 from pathlib import Path
 from PIL import Image, ImageOps
-from config import AnalysisSettings, MAX_IMAGE_PIXELS, MAX_IMAGE_SIDE, MAX_UPLOAD_BYTES, OUTPUTS_DIR, SAMPLE_IMAGES_DIR
+from config import AnalysisSettings, MAX_IMAGE_PIXELS, MAX_IMAGE_SIDE, MAX_UPLOAD_BYTES, OUTPUTS_DIR, SAMPLE_IMAGES_DIR, MODEL_PROFILES
 from detector import SatelliteDetector
 from pipeline import execute_analysis
 
 
 def run(comparison=False):
-    parser = argparse.ArgumentParser(description="Analyze overhead imagery with YOLOv8s and transparent activity rules.")
+    parser = argparse.ArgumentParser(description="Analyze overhead imagery with aerial detectors and transparent activity rules.")
     if comparison:
         parser.add_argument("--before", type=Path, default=SAMPLE_IMAGES_DIR / "before.png")
         parser.add_argument("--after", type=Path, default=SAMPLE_IMAGES_DIR / "after.png")
     else:
         parser.add_argument("--image", type=Path, default=SAMPLE_IMAGES_DIR / "example.png")
-    parser.add_argument("--confidence", type=float, default=0.18)
+    parser.add_argument("--model", choices=tuple(MODEL_PROFILES), default="aerial")
+    parser.add_argument("--confidence", type=float, default=0.40)
     parser.add_argument("--proximity", type=float, default=0.08, help="Fraction of image diagonal")
     parser.add_argument("--no-tiles", action="store_true", help="Run full-image inference only")
     parser.add_argument("--vehicles", action="store_true", help="Enable experimental vehicle detection")
-    parser.add_argument("--resolution", type=int, choices=(640, 1280), default=640)
+    parser.add_argument("--resolution", type=int, choices=(640, 1024, 1280), default=1024)
     parser.add_argument("--output-dir", type=Path, default=OUTPUTS_DIR / "runs")
     args = parser.parse_args()
     try:
-        settings = AnalysisSettings(aircraft_confidence=args.confidence, cluster_distance_fraction=args.proximity,
+        settings = AnalysisSettings(model_profile=args.model, aircraft_confidence=args.confidence, cluster_distance_fraction=args.proximity,
                                     tiled=not args.no_tiles, enable_vehicle_detection=args.vehicles,
                                     inference_size=args.resolution)
         paths = {"before": args.before, "after": args.after} if comparison else {"scene": args.image}
@@ -49,8 +50,8 @@ def run(comparison=False):
             path = folder / f"{label}.png"
             image.save(path)
             inputs[label] = {"path": path, "filename": paths[label].name}
-        print("Loading YOLOv8s; pretrained weights download on first use.", flush=True)
-        result = execute_analysis(SatelliteDetector(), inputs, folder, run_id, settings,
+        print(f"Loading {MODEL_PROFILES[args.model]['label']}; weights download on first use.", flush=True)
+        result = execute_analysis(SatelliteDetector(model_profile=args.model), inputs, folder, run_id, settings,
                                   lambda fraction, message: print(f"{fraction:.0%} {message}", flush=True))
         job = {"id": run_id, "mode": result["mode"], "created_at": result["created_at"],
                "status": "completed", "progress": 1, "message": "Analysis complete", "result": result,

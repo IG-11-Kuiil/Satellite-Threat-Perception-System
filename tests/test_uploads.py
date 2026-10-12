@@ -57,7 +57,7 @@ def test_queue_rechecked_after_upload(tmp_path,monkeypatch):
     monkeypatch.setattr(server,"validate_upload",simulated_upload)
     with pytest.raises(HTTPException) as exc:
         asyncio.run(server.submit(mode="single",image=upload(b"test"),after=None,
-                                  confidence=.18,tiled=True,vehicles=False,proximity=.08,resolution=640))
+                                  confidence=.18,tiled=True,vehicles=False,proximity=.08,resolution=640,model_profile="aerial"))
     assert exc.value.status_code == 429
     assert not list(tmp_path.iterdir())
     server.jobs.clear()

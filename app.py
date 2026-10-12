@@ -14,7 +14,7 @@ from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from config import (AnalysisSettings, MAX_IMAGE_PIXELS, MAX_IMAGE_SIDE, MAX_UPLOAD_BYTES,
-                    MODELS_DIR, RUNS_DIR, STATIC_DIR)
+                    MODELS_DIR, RUNS_DIR, STATIC_DIR, MODEL_PROFILES)
 from pipeline import execute_analysis
 
 logger = logging.getLogger(__name__)
@@ -26,11 +26,11 @@ jobs_lock = threading.Lock()
 detector = None
 
 
-def get_detector():
+def get_detector(model_profile="aerial"):
     global detector
-    if detector is None:
+    if detector is None or detector.model_profile != model_profile:
         from detector import SatelliteDetector
-        detector = SatelliteDetector()
+        detector = SatelliteDetector(model_profile=model_profile)
     return detector
 
 
@@ -75,7 +75,7 @@ def work(job_id, inputs, settings):
     try:
         update_job(job_id, status="running", progress=0.02,
                    message="Loading aircraft detector; first use may download model weights")
-        model = get_detector()
+        model = get_detector(settings.model_profile)
         result = execute_analysis(model, inputs, checked_run_dir(job_id), job_id, settings,
                                   lambda fraction, message: update_job(job_id, progress=round(fraction, 3), message=message),
                                   created_at=jobs[job_id]["created_at"])
@@ -123,15 +123,19 @@ def index():
 
 @app.get("/api/health")
 def health():
-    return {"status": "ok", "model": "YOLOv8s / COCO", "model_loaded": detector is not None,
-            "weights_cached": (MODELS_DIR / "yolov8s.pt").exists(), "max_upload_mb": 20}
+    return {"status": "ok", "model": MODEL_PROFILES["aerial"]["label"], "model_loaded": detector is not None,
+            "weights_cached": (MODELS_DIR / MODEL_PROFILES["aerial"]["weights"]).exists(),
+            "model_profiles": {key:{**info,"cached":(MODELS_DIR/info["weights"]).exists(),
+                                       "loaded":detector is not None and detector.model_profile == key}
+                               for key,info in MODEL_PROFILES.items()}, "max_upload_mb": 20}
 
 
 @app.post("/api/analyze", status_code=202)
 async def submit(mode: str = Form(...), image: UploadFile = File(...),
-                 after: UploadFile | None = File(None), confidence: float = Form(0.18),
+                 after: UploadFile | None = File(None), confidence: float = Form(0.40),
                  tiled: bool = Form(True), vehicles: bool = Form(False),
-                 proximity: float = Form(0.08), resolution: int = Form(640)):
+                 proximity: float = Form(0.08), resolution: int = Form(1024),
+                 model_profile: str = Form("aerial")):
     if mode not in ("single", "comparison"):
         raise HTTPException(400, "Choose single or comparison mode.")
     if mode == "comparison" and after is None:
@@ -139,7 +143,7 @@ async def submit(mode: str = Form(...), image: UploadFile = File(...),
     if mode == "single" and after is not None:
         raise HTTPException(400, "Single-image analysis accepts one image.")
     try:
-        settings = AnalysisSettings(aircraft_confidence=confidence, tiled=tiled,
+        settings = AnalysisSettings(model_profile=model_profile, aircraft_confidence=confidence, tiled=tiled,
                                     enable_vehicle_detection=vehicles,
                                     cluster_distance_fraction=proximity, inference_size=resolution)
     except ValueError as exc:

@@ -24,7 +24,7 @@ class FakeDetector:
 @pytest.fixture
 def client(tmp_path, monkeypatch):
     monkeypatch.setattr(server,"RUNS_DIR",tmp_path)
-    monkeypatch.setattr(server,"get_detector",lambda:FakeDetector())
+    monkeypatch.setattr(server,"get_detector",lambda profile="aerial":FakeDetector())
     server.jobs.clear()
     with TestClient(server.app) as client:
         yield client
@@ -95,7 +95,7 @@ def test_size_limit_and_multi_frame(client,monkeypatch):
 
 
 def test_failed_job_is_visible(client,monkeypatch):
-    def fail():
+    def fail(profile="aerial"):
         raise RuntimeError("Test model loading failed")
     monkeypatch.setattr(server,"get_detector",fail)
     response = client.post("/api/analyze",data={"mode":"single"},files={"image":("image.png",image_bytes())})
