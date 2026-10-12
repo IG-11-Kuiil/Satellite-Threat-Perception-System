@@ -1,5 +1,12 @@
 """Aggregate comparison with bounded spatial contribution and symmetric priority."""
+from assessment_policy import DEFAULT_POLICY
 ACTIVITY_RANK = {"LOW": 0, "MEDIUM": 1, "HIGH": 2}
+
+
+def trend_score(aircraft_delta,vehicle_delta,rank_delta,density_delta):
+    p = DEFAULT_POLICY
+    return (p.aircraft_weight*aircraft_delta+p.vehicle_weight*vehicle_delta+
+            p.activity_rank_weight*rank_delta+p.proximity_density_weight*density_delta)
 
 
 def compare_counts(previous_count, current_count, asset_name="asset"):
@@ -26,17 +33,17 @@ def pair_density(analysis):
 
 
 def assess_activity_trend(aircraft_change, vehicle_change, cluster_change, activity_change, density_difference=0.0):
-    score = 2*aircraft_change["difference"]+vehicle_change["difference"]
-    score += 2*activity_change["rank_difference"]+2*density_difference
-    return "Increased" if score >= 2 else "Decreased" if score <= -2 else "Stable"
+    score = trend_score(aircraft_change["difference"],vehicle_change["difference"],activity_change["rank_difference"],density_difference)
+    cutoff = DEFAULT_POLICY.trend_threshold
+    return "Increased" if score >= cutoff else "Decreased" if score <= -cutoff else "Stable"
 
 
 def assess_priority(aircraft_change, vehicle_change, cluster_change, activity_trend,
                     current_activity_level, previous_activity_level="LOW", density_difference=0.0):
     magnitude = abs(aircraft_change["difference"])
-    if magnitude >= 2 or abs(vehicle_change["difference"]) >= 4:
+    if magnitude >= DEFAULT_POLICY.high_review_aircraft_delta or abs(vehicle_change["difference"]) >= DEFAULT_POLICY.high_review_vehicle_delta:
         return "High"
-    if magnitude == 1 or abs(vehicle_change["difference"]) > 0 or abs(density_difference) >= 0.25:
+    if magnitude > 0 or abs(vehicle_change["difference"]) > 0 or abs(density_difference) >= DEFAULT_POLICY.medium_review_density_delta:
         return "Medium"
     return "Low"
 
@@ -47,7 +54,7 @@ def compare_scenes(previous_analysis, current_analysis):
     pairs = compare_counts(len(previous_analysis["clusters"]), len(current_analysis["clusters"]), "aircraft_cluster_pairs")
     activity = compare_activity_levels(previous_analysis["activity_level"], current_analysis["activity_level"])
     density_delta = pair_density(current_analysis)-pair_density(previous_analysis)
-    score = 2*aircraft["difference"]+vehicles["difference"]+2*activity["rank_difference"]+2*density_delta
+    score = trend_score(aircraft["difference"],vehicles["difference"],activity["rank_difference"],density_delta)
     trend = assess_activity_trend(aircraft, vehicles, pairs, activity, density_delta)
     priority = assess_priority(aircraft, vehicles, pairs, trend, current_analysis["activity_level"],
                                previous_analysis["activity_level"], density_delta)
@@ -56,8 +63,8 @@ def compare_scenes(previous_analysis, current_analysis):
         reasons.append(f"Aircraft count changed by {format_signed(aircraft['difference'])}.")
     if vehicles["difference"]:
         reasons.append(f"Vehicle count changed by {format_signed(vehicles['difference'])}.")
-    if abs(density_delta) >= 0.25:
-        reasons.append("Aircraft proximity density changed by at least 25 percentage points.")
+    if abs(density_delta) >= DEFAULT_POLICY.medium_review_density_delta:
+        reasons.append(f"Aircraft proximity density changed by at least {DEFAULT_POLICY.medium_review_density_delta*100:g} percentage points.")
     if not reasons:
         reasons.append("No substantial change under the configured count and proximity rules.")
     warnings = ["Compare the same ground area, crop, and scale. Image alignment and asset matching are not performed.",
@@ -67,6 +74,8 @@ def compare_scenes(previous_analysis, current_analysis):
     before_primary = previous_analysis.get("primary_aircraft_count",previous_analysis["aircraft_count"])
     after_primary = current_analysis.get("primary_aircraft_count",current_analysis["aircraft_count"])
     review_candidates = previous_analysis.get("review_candidate_count",0)+current_analysis.get("review_candidate_count",0)
+    delta_min = after_primary-previous_analysis["aircraft_count"]
+    delta_max = current_analysis["aircraft_count"]-before_primary
     if review_candidates:
         warnings.append("Reported totals include cross-model review candidates. The exact count change is provisional until those candidates are confirmed.")
     warnings.append("Clouds, shadows, and unequal visible coverage may conceal aircraft; aggregate totals alone cannot establish arrivals or departures.")
@@ -82,6 +91,10 @@ def compare_scenes(previous_analysis, current_analysis):
             "trend_score": round(score, 4), "activity_trend": trend, "priority": priority,
             "primary_aircraft_change":compare_counts(before_primary,after_primary,"primary_aircraft"),
             "review_candidate_count":review_candidates,"requires_confirmation":bool(review_candidates),
+            "assessment_policy_id":DEFAULT_POLICY.id,
+            "candidate_sensitivity":{"minimum_delta":delta_min,"maximum_delta":delta_max,
+                                     "direction_depends_on_candidates":bool(review_candidates and delta_min <= 0 <= delta_max),
+                                     "meaning":"Range from including/excluding known review candidates only; not a confidence interval or bound on missed aircraft."},
             "priority_reasons": reasons, "warnings": warnings}
 
 
@@ -95,6 +108,9 @@ def generate_change_summary(result):
     if result.get("review_candidate_count"):
         primary = result["primary_aircraft_change"]
         parts.append(f"Totals include {result['review_candidate_count']} candidate(s) requiring manual confirmation. Primary detections changed from {primary['previous_count']} to {primary['current_count']} ({format_signed(primary['difference'])}); the exact total change is provisional.")
+        sensitivity = result.get("candidate_sensitivity")
+        if sensitivity:
+            parts.append(f"Known-candidate sensitivity: {format_signed(sensitivity['minimum_delta'])} to {format_signed(sensitivity['maximum_delta'])} aircraft. This is not a statistical confidence interval.")
     if vehicles["previous_count"] or vehicles["current_count"]:
         parts.append(f"Vehicle detections changed from {vehicles['previous_count']} to {vehicles['current_count']} ({format_signed(vehicles['difference'])}).")
     activity = result["activity_change"]

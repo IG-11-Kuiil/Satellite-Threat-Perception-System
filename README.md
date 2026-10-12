@@ -2,6 +2,8 @@
 
 A local imagery analysis workspace for single-scene aircraft detection and before/after comparison. The interface combines a defence-style operations console with aerial-model inference, transparent spatial reasoning, rotated annotations, and downloadable reports.
 
+**Assessment scope:** LOW/MEDIUM/HIGH are demonstration asset-presence bands. Review priority is a prototype triage rule. Neither is a military threat rating, and formal analytic confidence is **not assessed**. See [assessment policy and published guidance](docs/ASSESSMENT_POLICY.md).
+
 ## Start the interface
 
 Requires Python 3.10 or later. From the project directory:
@@ -53,7 +55,7 @@ For shifted edge fragments, the detector clips both predictions to the fragment'
 
 **Spatial reasoning.** Aircraft centers are linked when separated by less than a configurable fraction of the image diagonal (default 8%). Connected components of two or more aircraft are proximity groups. An isolated aircraft has no neighbors. Nearby pairs and distinct groups are reported separately. Proximity density is nearby pairs divided by all possible aircraft pairs; this avoids a raw pair count that grows quadratically dominating comparisons. Relative-image distances remain consistent when the same image is resized; they do not compensate for different ground coverage, crops, or geographic resolution.
 
-**Activity.** Detected aircraft plus enabled vehicle detections determine observed asset presence: LOW for 0–2, MEDIUM for 3–6, HIGH for 7+. Activity does not establish movement or intent. Aircraft scores below 40% produce visible review flags and caveats. Disabled vehicles are reported as **not analyzed**, rather than interpreted as absent.
+**Asset presence.** Detected aircraft plus enabled vehicle detections determine a prototype count band: LOW for 0–2, MEDIUM for 3–6, HIGH for 7+. These are local demonstration cutoffs, not military standards. Presence does not establish movement or intent. Aircraft scores below 40% produce visible review flags and caveats. Disabled vehicles are reported as **not analyzed**, rather than interpreted as absent.
 
 **Change.** The app compares aggregate scene counts, nearby-pair density, and activity rank (LOW=0, MEDIUM=1, HIGH=2):
 
@@ -76,6 +78,8 @@ Review priority uses absolute change, so departures receive review priority too:
 
 Reports explain the rules and priority reasons. Both scene caveats and comparison caveats are visible. Low-confidence detections still contribute to counts; their caveats are propagated rather than silently discarded. Differing aspect ratios trigger a comparison warning. Even equal-size images require a human to verify comparable ground coverage and scale.
 
+Every new report includes the `prototype-presence-v1` policy snapshot: cutoffs, weights, non-operational status, and unassessed threat/analytic confidence. Candidate sensitivity shows how the count delta changes when known review candidates are included or excluded. For the validated 9-before/12-after pair, that range is +2 to +3. It is not a statistical confidence interval and does not account for aircraft missed by both models. Published [ODNI](https://www.dni.gov/files/documents/ICD/ICD-203.pdf) and [PHIA](https://www.gov.uk/government/publications/explaining-uncertainty-in-uk-intelligence-assessment/explaining-uncertainty-in-uk-intelligence-assessment) guidance informs these transparency choices; no compliance or military calibration is claimed.
+
 ## Command-line workflows
 
 Both CLI runners use the same pipeline and settings as the interface:
@@ -94,6 +98,7 @@ app.py                  Local API, uploads, queue, status, history, artifacts
 run_ui.py / start.ps1    Launchers
 web/                    HTML, CSS, JavaScript, and SVG brand mark
 config.py               Shared validated settings and paths
+assessment_policy.py    Versioned presence, trend, and review policy
 detector.py             YOLO inference, tiling, coordinate mapping, suppression
 spatial.py              Proximity pairs, groups, isolation, density
 activity.py             Activity classification and scene prose
@@ -116,6 +121,8 @@ The original broken `src.*` imports have been replaced with the actual flat modu
 .\.venv\Scripts\python.exe -m pytest
 node --check web/app.js
 ```
+
+GitHub Actions runs the unit/API suite and JavaScript syntax check on pushes and pull requests, using CPU-only PyTorch. Unit tests do not download model weights or upload imagery.
 
 Tests cover activity boundaries, group/isolation correctness, resizing behavior, duplicate suppression, tile coverage, class mapping and offsets, symmetric priorities, bounded spatial scoring, uncertainty propagation, upload validation, EXIF orientation, multi-page rejection, artifacts, background failures, queue limits, restart recovery, and transient Windows file locks. Geometry regressions also cover contained high-confidence tile fragments, nearby rotated aircraft, unmatched edge detections, and OBB class/polygon mapping. API tests use a deterministic fake detector and require no model download. See [the scene validation record](docs/DETECTION_VALIDATION.md) for actual model comparisons and the image that motivated the aerial-model upgrade.
 

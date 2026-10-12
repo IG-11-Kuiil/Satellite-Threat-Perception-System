@@ -56,6 +56,8 @@ def test_complete_upload_report_and_annotation(client,mode):
     assert job["status"] == "completed",job
     result = job["result"]
     assert result["mode"] == mode
+    assert result["assessment_policy"]["id"] == "prototype-presence-v1"
+    assert not result["assessment_policy"]["validated_operationally"]
     assert len(result["scenes"]) == (1 if mode == "single" else 2)
     for scene in result["scenes"].values():
         assert scene["low_confidence_count"] == 1
@@ -68,6 +70,7 @@ def test_complete_upload_report_and_annotation(client,mode):
     assert report.status_code == 200
     assert "Human verification" in report.text
     assert "not analyzed" in report.text
+    assert "not a military standard" in report.text
     assert client.get(result["json_url"]).json()["id"] == result["id"]
     assert client.get("/api/jobs").json()[0]["status"] == "completed"
     # Completed runs survive a new in-memory session.

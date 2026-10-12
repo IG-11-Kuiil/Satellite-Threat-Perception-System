@@ -49,12 +49,12 @@ function setFile(slot, file) {
   drop.querySelector('.preview-overlay').hidden = !file;
   document.querySelector(`.remove-file[data-slot="${slot}"]`).hidden = !file;
   const info = $(`info-${slot}`);
-  info.textContent = file ? `${file.name} · ${(file.size / 1024 / 1024).toFixed(1)} MB` : 'No image selected';
+  info.textContent = file ? `${file.name} Â· ${(file.size / 1024 / 1024).toFixed(1)} MB` : 'No image selected';
   info.title = file?.name || '';
   if (file) {
     preview.src = urls[slot];
-    preview.onload = () => { if (files[slot] === file) info.textContent = `${file.name} · ${preview.naturalWidth} × ${preview.naturalHeight}`; };
-    preview.onerror = () => { if (files[slot] === file) { preview.hidden = true; drop.querySelector('.upload-empty').hidden = false; drop.querySelector('.upload-empty strong').textContent = /\.tiff?$/i.test(file.name) ? 'TIFF image loaded' : 'Preview unavailable'; info.textContent = `${file.name} · ready for server validation`; } };
+    preview.onload = () => { if (files[slot] === file) info.textContent = `${file.name} Â· ${preview.naturalWidth} Ã— ${preview.naturalHeight}`; };
+    preview.onerror = () => { if (files[slot] === file) { preview.hidden = true; drop.querySelector('.upload-empty').hidden = false; drop.querySelector('.upload-empty strong').textContent = /\.tiff?$/i.test(file.name) ? 'TIFF image loaded' : 'Preview unavailable'; info.textContent = `${file.name} Â· ready for server validation`; } };
   } else {
     preview.removeAttribute('src'); $(`file-${slot}`).value = '';
     drop.querySelector('.upload-empty strong').textContent = 'Drop imagery here';
@@ -103,7 +103,7 @@ $('run-button').addEventListener('click', async () => {
   // Hide the previous assessment so it cannot be mistaken for this new run.
   $('results').hidden = true; $('empty-results').hidden = false;
   $('result-meta').textContent = 'ANALYSIS IN PROGRESS';
-  progress(0, 'Uploading and validating imagery…');
+  progress(0, 'Uploading and validating imageryâ€¦');
   const form = new FormData();
   form.append('mode', mode); form.append('image', files.first);
   if (mode === 'comparison') form.append('after', files.second);
@@ -138,13 +138,13 @@ function renderResult(data) {
   const scenes = Object.values(data.scenes), latest = data.scenes.after || data.scenes.scene;
   const metrics = $('metrics'); metrics.replaceChildren();
   if (data.change) {
-    metrics.append(metric('AIRCRAFT CHANGE', signed(data.change.aircraft_change.difference), `${data.scenes.before.aircraft_count} baseline → ${latest.aircraft_count} current`),
-      metric('ACTIVITY TREND', data.change.activity_trend, `${data.change.activity_change.previous_level} → ${data.change.activity_change.current_level}`),
+    metrics.append(metric('AIRCRAFT CHANGE', signed(data.change.aircraft_change.difference), `${data.scenes.before.aircraft_count} baseline â†’ ${latest.aircraft_count} current`),
+      metric('ACTIVITY TREND', data.change.activity_trend, `${data.change.activity_change.previous_level} â†’ ${data.change.activity_change.current_level}`),
       metric('REVIEW PRIORITY', data.change.priority, 'Based on change magnitude', data.change.priority === 'High'),
       metric('REVIEW FLAGS', scenes.reduce((n, s) => n + (s.review_required_count ?? s.low_confidence_count), 0), 'Weak, partial, or cross-model review candidates', scenes.some(s => (s.review_required_count ?? s.low_confidence_count))));
   } else {
     metrics.append(metric('AIRCRAFT DETECTED', latest.aircraft_count, latest.vehicles_enabled ? `${latest.vehicle_count} experimental vehicle detections` : 'Vehicle detection disabled'),
-      metric('OBSERVED ACTIVITY', latest.activity_level, 'Count-based asset presence'),
+      metric('ASSET PRESENCE', latest.activity_level, 'Prototype count band'),
       metric('PROXIMITY GROUPS', latest.spatial.group_count, `${latest.spatial.isolated_count} isolated aircraft`),
       metric('REVIEW FLAGS', latest.review_required_count ?? latest.low_confidence_count, 'Weak, partial, or cross-model review candidates', (latest.review_required_count ?? latest.low_confidence_count) > 0));
   }
@@ -152,6 +152,7 @@ function renderResult(data) {
   chip.textContent = data.change ? `${data.change.priority.toUpperCase()} PRIORITY` : 'SCENE ASSESSMENT';
   chip.className = `chip ${data.change?.priority.toLowerCase() || ''}`;
   $('assessment-text').textContent = data.change_summary || latest.summary;
+  $('policy-caption').textContent = `Prototype policy: ${data.assessment_policy?.id || 'legacy count rules'}. Presence and review bands are not military threat ratings. Formal analytic confidence: not assessed.`;
   const summaries = $('scene-summaries'); summaries.replaceChildren();
   if (data.change) for (const [label, scene] of Object.entries(data.scenes)) {
     const block = element('div', 'scene-summary'); block.append(element('h3', '', sceneName(label).toUpperCase()), element('p', '', scene.summary)); summaries.append(block);
@@ -168,9 +169,9 @@ function renderImages() {
   const container = $('scene-images'); container.replaceChildren(); container.classList.toggle('single', result.mode === 'single');
   for (const [label, scene] of Object.entries(result.scenes)) {
     const card = element('div', 'scene-card'), header = element('div', 'scene-card-header');
-    header.append(element('span', '', sceneName(label).toUpperCase()), element('span', '', `${scene.width} × ${scene.height} PX`));
+    header.append(element('span', '', sceneName(label).toUpperCase()), element('span', '', `${scene.width} Ã— ${scene.height} PX`));
     const button = element('button'); button.type = 'button'; button.setAttribute('aria-label', `Expand ${sceneName(label).toLowerCase()} ${view} imagery`);
-    const image = element('img'); image.src = view === 'annotated' ? scene.annotated_url : scene.original_url; image.alt = `${sceneName(label)} — ${view} imagery`;
+    const image = element('img'); image.src = view === 'annotated' ? scene.annotated_url : scene.original_url; image.alt = `${sceneName(label)} â€” ${view} imagery`;
     button.append(image); button.addEventListener('click', () => { $('dialog-image').src = image.src; $('dialog-title').textContent = `${sceneName(label).toUpperCase()} / ${view.toUpperCase()}`; $('image-dialog').showModal(); });
     const details = element('div', 'scene-metrics');
     details.append(element('span', '', `${scene.aircraft_count} AIRCRAFT`), element('span', '', `${scene.spatial.group_count} GROUPS`), element('span', '', `${scene.activity_level} ACTIVITY`));
@@ -190,7 +191,7 @@ function renderTable() {
     fill.style.width = `${Math.round(detection.confidence * 100)}%`; bar.append(fill);
     confidence.append(bar, element('span', '', `${Math.round(detection.confidence * 100)}%`)); cell.append(confidence); row.append(cell);
     if (detection.accepted_by === 'cross_model_review') {
-      cell.append(element('small','support-score',`${Math.round(detection.supporting_confidence*100)}% supporting model · REVIEW`));
+      cell.append(element('small','support-score',`${Math.round(detection.supporting_confidence*100)}% supporting model Â· REVIEW`));
       cell.title = `Primary: ${detection.confidence.toFixed(3)}; ${detection.supporting_model}: ${detection.supporting_confidence.toFixed(3)}. Needs manual confirmation.`;
     }
     row.append(element('td', '', `${Math.round((detection.bbox[0] + detection.bbox[2]) / 2)}, ${Math.round((detection.bbox[1] + detection.bbox[3]) / 2)}`)); tbody.append(row);
@@ -203,13 +204,13 @@ async function refreshHistory() {
     $('mobile-history').replaceChildren(element('option', '', 'Recent runs'));
     $('mobile-history').firstElementChild.value = '';
     for (const run of runs) {
-      const option = element('option', '', `${run.status === 'failed' ? 'Failed · ' : ''}${run.filenames.join(' → ')}`);
+      const option = element('option', '', `${run.status === 'failed' ? 'Failed Â· ' : ''}${run.filenames.join(' â†’ ')}`);
       option.value = run.id; $('mobile-history').append(option);
     }
     if (!runs.length) { container.append(element('p', 'sidebar-note', 'Your analyses will appear here.')); return; }
     for (const run of runs.slice(0, 6)) {
-      const button = element('button', 'history-item'); button.title = run.filenames.join(' → ');
-      button.append(element('strong', '', run.filenames.join(' → ')));
+      const button = element('button', 'history-item'); button.title = run.filenames.join(' â†’ ');
+      button.append(element('strong', '', run.filenames.join(' â†’ ')));
       const detail = element('small'); detail.append(element('span', '', new Date(run.created_at).toLocaleDateString()), element('span', run.status === 'completed' ? 'complete' : '', run.status.toUpperCase())); button.append(detail);
       button.addEventListener('click', () => openRun(run.id)); container.append(button);
     }

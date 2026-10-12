@@ -9,6 +9,7 @@ from change_detection import compare_scenes, generate_change_summary
 from config import AnalysisSettings, LOW_CONFIDENCE_THRESHOLD, MODEL_PROFILES
 from detector import read_image
 from spatial import analyze_spatial
+from assessment_policy import DEFAULT_POLICY, describe_policy
 
 
 def analyze_image(detector, image_path, settings=None, progress=None, filename=None):
@@ -109,12 +110,10 @@ def build_report(result):
                   f"Trend score: {result['change']['trend_score']}",
                   f"Proximity density change: {result['change']['density_difference']:+.1%}", ""]
         lines += [f"- {warning}" for warning in result["change"]["warnings"]]+[""]
-    lines += ["SETTINGS", json.dumps(result["settings"], indent=2), "", "RULES",
-              "Activity: detected aircraft + enabled vehicles; LOW 0-2, MEDIUM 3-6, HIGH 7+.",
-              "Trend: 2*aircraft_delta + vehicle_delta + 2*activity_rank_delta + 2*proximity_density_delta.",
-              "Trend thresholds: >=2 Increased, <=-2 Decreased, otherwise Stable.",
-              "Review priority: High for >=2 aircraft or >=4 vehicles changed (absolute).",
-              "Medium for 1 aircraft, any vehicles, or >=25 percentage points of density change; otherwise Low.",
+    policy = result.get("assessment_policy",DEFAULT_POLICY.snapshot())
+    lines += ["SETTINGS", json.dumps(result["settings"], indent=2), "", "ASSESSMENT POLICY"]
+    lines += describe_policy(policy)
+    lines += ["Policy snapshot:",json.dumps(policy,indent=2),
               "Proximity: connected aircraft groups using a fraction of image diagonal, not geographic distance.",
               "Subthreshold candidates are included only with an overlapping second aerial model above the selected threshold, and remain manual-review candidates.",
               "", "LIMITATIONS", "Counts do not establish military intent, movement, or threat.",
@@ -142,7 +141,8 @@ def execute_analysis(detector, inputs, run_dir, run_id, settings=None, progress=
     result = {"id": run_id, "created_at": created_at or datetime.now(timezone.utc).isoformat(),
               "mode": "comparison" if len(inputs) == 2 else "single",
               "model": next(iter(scenes.values())).get("model",MODEL_PROFILES[settings.model_profile]["label"]),
-              "settings": settings.to_dict(), "scenes": scenes, "change": None}
+              "settings": settings.to_dict(), "assessment_policy":DEFAULT_POLICY.snapshot(),
+              "scenes": scenes, "change": None}
     if len(inputs) == 2:
         result["change"] = compare_scenes(scenes["before"], scenes["after"])
         result["change_summary"] = generate_change_summary(result["change"])

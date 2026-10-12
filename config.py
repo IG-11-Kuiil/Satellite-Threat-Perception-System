@@ -1,6 +1,7 @@
 """Shared paths and validated analysis settings."""
 from dataclasses import asdict, dataclass
 from pathlib import Path
+from assessment_policy import DEFAULT_POLICY
 
 ROOT = Path(__file__).resolve().parent
 SAMPLE_IMAGES_DIR = ROOT / "data" / "sample_images"
@@ -9,8 +10,8 @@ OUTPUTS_DIR = ROOT / "outputs"
 RUNS_DIR = OUTPUTS_DIR / "runs"
 STATIC_DIR = ROOT / "web"
 TARGET_CLASSES = ("aircraft", "vehicle")
-LOW_ACTIVITY_MAX = 2
-MEDIUM_ACTIVITY_MAX = 6
+LOW_ACTIVITY_MAX = DEFAULT_POLICY.low_presence_max
+MEDIUM_ACTIVITY_MAX = DEFAULT_POLICY.medium_presence_max
 MAX_UPLOAD_BYTES = 20 * 1024 * 1024
 MAX_IMAGE_PIXELS = 16_000_000
 MAX_IMAGE_SIDE = 4096
