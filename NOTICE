@@ -1,0 +1,23 @@
+Athena - Satellite Threat Perception System
+Copyright (c) 2026 Shaurya Singh.
+
+The current integrated application and accompanying original documentation
+are released under GNU Affero General Public License version 3 only
+(SPDX identifier: AGPL-3.0-only). See LICENSE for the complete terms.
+There is no warranty, as described in sections 15 and 16 of LICENSE.
+
+Licensing updated on 2026-10-11: the previous prospective rights-reserved
+notice is superseded for this release by the AGPL-3.0 grant.
+
+Previously published original Athena code through commit
+ a792e613fa24bae22dea69469bcff280d8752e03
+was offered under MIT. Existing MIT permissions remain for that material;
+its original notice is preserved in docs/licenses/MIT-previous.txt. The
+integrated application is offered as a whole under AGPL-3.0-only; this does
+not revoke separate permissions previously granted for the original code.
+
+Third-party components retain their respective copyright and license terms.
+See THIRD_PARTY_NOTICES.md. This change does not grant an Ultralytics
+Enterprise license or certify a complete third-party compliance audit.
+
+Source: https://github.com/IG-11-Kuiil/Satellite-Threat-Perception-System
