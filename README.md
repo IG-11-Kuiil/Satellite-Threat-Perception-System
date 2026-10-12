@@ -4,6 +4,54 @@ Athena is a **Satellite Threat Perception System**: a local imagery analysis wor
 
 **Assessment scope:** LOW/MEDIUM/HIGH are demonstration asset-presence bands. Review priority is a prototype triage rule. Neither is a military threat rating, and formal analytic confidence is **not assessed**. See [assessment policy and published guidance](docs/ASSESSMENT_POLICY.md).
 
+## Project at a glance
+
+Project by **Shaurya Singh**. Athena explores how overhead imagery can become a reviewable record of detected assets and scene-to-scene differences, rather than only a set of boxes. Its current focus is aircraft counting and human review in a local workspace.
+
+| Capability | What works today |
+| --- | --- |
+| Single-scene analysis | Aircraft detections, rotated overlays, nearby groups, and asset-presence summaries |
+| Before/after comparison | Aggregate count changes, grouping changes, and review priority |
+| Candidate review | A second model checks weak primary candidates; provisional detections remain visible |
+| Saved evidence | Original and annotated views, per-object scores, run history, text reports, and JSON exports |
+| Local operation | Inference runs on this computer after model downloads; no hosted inference service |
+
+**Built around pretrained models:** Ultralytics supplies the detection models. Athena's application layer provides validated uploads, overlapping image scans, duplicate suppression, candidate review, spatial reasoning, auditable assessments, and the operations interface. No custom aircraft model training is claimed.
+
+## Screenshots
+
+### Upload and choose a workflow
+
+<img src="docs/images/athena-workspace.jpg" alt="Athena workspace showing single-image and before/after workflows and two upload slots" width="560">
+
+### Review the evidence and uncertainty
+
+<img src="docs/images/athena-assessment.jpg" alt="Actual Athena comparison summary showing nine to twelve detections, eleven primary after detections, one review candidate, and a provisional change of two to three" width="520">
+
+These are captures of the running app. The second shows one tested comparison: **9 aircraft before and 12 candidate-inclusive detections after**, including **one candidate requiring confirmation**. The primary-only counts are **9 to 11**. This example is not a measured accuracy rate or evidence of actual aircraft movement. The published screenshots show the interface and assessment text; uploaded source imagery is not bundled.
+
+## Try the workflow
+
+After starting the local interface:
+
+1. Analyze one overhead image and inspect the boxes against the original. Review flags and model scores are shown alongside counts.
+2. Upload comparable before/after scenes and run change detection. Inspect primary counts separately from review candidates.
+3. Expand the imagery, inspect the asset table, and read the comparison caveats before interpreting the change.
+4. Download the report or JSON, then reopen the saved analysis from Recent runs.
+
+Use imagery you are permitted to process. No input images are bundled. For a short narrated product walkthrough, see the [demo recording outline](docs/DEMO_WALKTHROUGH.md).
+
+## Design choices and evidence
+
+- **Aerial models instead of a general detector:** rotated detections suit overhead aircraft at different angles.
+- **Tile-aware duplicate removal:** overlapping scans help small objects, but edge fragments must not inflate counts.
+- **Visible provisional candidates:** agreement between two models can support review without turning a weak score into certainty.
+- **Versioned assessment rules:** presence and review priority are explainable prototype rules, not military threat judgments.
+
+The recorded single-scene check found four aircraft with the default aerial profile. The supplied comparison produced the counts shown above; a reduced-size version still missed an aircraft. A small public reference check also exposed a false positive. These are debugging and validation examples, not a representative benchmark. See [single-scene validation](docs/DETECTION_VALIDATION.md), [comparison validation](docs/COMPARISON_VALIDATION.md), and the [assessment policy](docs/ASSESSMENT_POLICY.md) for details.
+
+The automated suite currently has **64 tests** covering geometry, reasoning, uploads, API behavior, and persistence. The tests verify application behavior; they do not establish model accuracy. [GitHub Actions](https://github.com/IG-11-Kuiil/Satellite-Threat-Perception-System/actions/workflows/tests.yml) runs the checks on pushes and pull requests.
+
 ## Start the interface
 
 Requires Python 3.10 or later. From the project directory:
