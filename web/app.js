@@ -90,7 +90,7 @@ async function watchJob(id) {
   while (true) {
     let job;
     try { job = await api(`/api/jobs/${id}`); failures = 0; }
-    catch (error) { failures++; if (failures >= 5) throw new Error('Connection interrupted. Your run may still be processing. Reopen it from Recent analyses when the local server is available.'); await delay(2000); continue; }
+    catch (error) { failures++; if (failures >= 5) throw new Error('Connection interrupted. Your run may still be processing. Reopen it from Recent runs when the local server is available.'); await delay(2000); continue; }
     progress(job.progress || 0, job.message);
     if (job.status === 'completed') { renderResult(job.result); return; }
     if (job.status === 'failed') throw new Error(job.error || 'Analysis failed. Check your images and try again.');
@@ -200,7 +200,7 @@ $('table-scene').addEventListener('change', renderTable);
 async function refreshHistory() {
   try {
     const runs = await api('/api/jobs'), container = $('history'); container.replaceChildren();
-    $('mobile-history').replaceChildren(element('option', '', 'Recent analyses'));
+    $('mobile-history').replaceChildren(element('option', '', 'Recent runs'));
     $('mobile-history').firstElementChild.value = '';
     for (const run of runs) {
       const option = element('option', '', `${run.status === 'failed' ? 'Failed · ' : ''}${run.filenames.join(' → ')}`);

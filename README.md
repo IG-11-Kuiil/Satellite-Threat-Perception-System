@@ -37,7 +37,7 @@ The default detector is **YOLO11s-OBB pretrained on DOTA v1 aerial imagery**, re
 3. Choose a detector profile and aircraft confidence threshold (default 40%). Tiled scanning is enabled by default. Advanced parameters expose inference resolution (default 1024 px), proximity distance, and experimental vehicle detection. Low confidence thresholds increase false detections, including on text and watermarks.
 4. Run analysis and follow the actual inference progress. A single worker serializes model access; up to four active/queued runs are accepted.
 5. Review annotated images, switch to originals, expand imagery, inspect the asset table, and download the text report or structured JSON.
-6. Reopen completed analyses from Recent analyses. Runs persist across server restarts; interrupted runs are marked failed and can be submitted again. Recent runs and method information are available on mobile as well.
+6. Reopen completed analyses from the **Recent runs** sidebar list (or the Recent runs dropdown on mobile). Runs persist across server restarts; interrupted runs are marked failed and can be submitted again.
 
 Each run has a unique directory under `outputs/runs/<uuid>/`. It contains normalized source PNGs, annotated JPEGs, `report.txt`, `result.json`, and lifecycle metadata in `job.json`. New analyses do not overwrite earlier runs. Uploads and generated outputs are excluded from Git. Files remain in this workspace; a workspace located in a cloud-synced folder follows that folder's normal sync behavior.
 
