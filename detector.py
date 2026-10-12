@@ -1,152 +1,119 @@
+"""YOLO inference and confidence-ordered suppression in image coordinates."""
 from pathlib import Path
+from threading import Lock
 import cv2
-from ultralytics import YOLO
+import numpy as np
+from config import AnalysisSettings, MODELS_DIR
 
 
 def compute_iou(box1, box2):
-    x1 = max(box1[0], box2[0])
-    y1 = max(box1[1], box2[1])
-    x2 = min(box1[2], box2[2])
-    y2 = min(box1[3], box2[3])
-
-    inter_width = max(0, x2 - x1)
-    inter_height = max(0, y2 - y1)
-    intersection = inter_width * inter_height
-
-    area1 = max(0, box1[2] - box1[0]) * max(0, box1[3] - box1[1])
-    area2 = max(0, box2[2] - box2[0]) * max(0, box2[3] - box2[1])
-
-    union = area1 + area2 - intersection
-    if union == 0:
-        return 0.0
-
-    return intersection / union
+    x1, y1 = max(box1[0], box2[0]), max(box1[1], box2[1])
+    x2, y2 = min(box1[2], box2[2]), min(box1[3], box2[3])
+    intersection = max(0, x2-x1) * max(0, y2-y1)
+    area1 = max(0, box1[2]-box1[0]) * max(0, box1[3]-box1[1])
+    area2 = max(0, box2[2]-box2[0]) * max(0, box2[3]-box2[1])
+    union = area1+area2-intersection
+    return intersection/union if union > 0 else 0.0
 
 
-def remove_duplicate_detections(detections, iou_threshold=0.4):
-    detections = sorted(detections, key=lambda d: d["confidence"], reverse=True)
+def remove_duplicate_detections(detections, iou_threshold=0.35):
     filtered = []
-
-    for det in detections:
-        keep = True
-        for kept in filtered:
-            if det["class"] == kept["class"]:
-                iou = compute_iou(det["bbox"], kept["bbox"])
-                if iou > iou_threshold:
-                    keep = False
-                    break
-
-        if keep:
-            filtered.append(det)
-
+    for detection in sorted(detections, key=lambda d: d["confidence"], reverse=True):
+        if not any(detection["class"] == kept["class"] and
+                   compute_iou(detection["bbox"], kept["bbox"]) > iou_threshold
+                   for kept in filtered):
+            filtered.append(detection)
     return filtered
 
 
+def tile_origins(length, tile_size, stride):
+    """Cover edges without tiny trailing crops or duplicate small-image passes."""
+    if length <= tile_size:
+        return [0]
+    origins = list(range(0, length-tile_size+1, stride))
+    if origins[-1] != length-tile_size:
+        origins.append(length-tile_size)
+    return origins
+
+
+def read_image(image_path):
+    try:
+        image = cv2.imdecode(np.fromfile(str(image_path), dtype=np.uint8), cv2.IMREAD_COLOR)
+    except (OSError, ValueError):
+        image = None
+    if image is None:
+        raise ValueError(f"Could not read image: {Path(image_path).name}")
+    return image
+
+
 class SatelliteDetector:
-    def __init__(self, enable_vehicle_detection=False, verbose=False):
-        self.model = YOLO("yolov8s.pt")
-
-        self.aircraft_conf_threshold = 0.18
-        self.vehicle_conf_threshold = 0.30
-
-        self.enable_vehicle_detection = enable_vehicle_detection
+    def __init__(self, enable_vehicle_detection=False, verbose=False, model=None):
         self.verbose = verbose
+        self.enable_vehicle_detection = enable_vehicle_detection
+        self._lock = Lock()
+        if model is None:
+            from ultralytics import YOLO
+            MODELS_DIR.mkdir(parents=True, exist_ok=True)
+            model = YOLO(str(MODELS_DIR / "yolov8s.pt"))
+        self.model = model
 
-    def _process_yolo_results(self, results, x_offset=0, y_offset=0):
+    def _process_yolo_results(self, results, settings, x_offset=0, y_offset=0):
         detections = []
-
-        for box in results[0].boxes:
-            cls_id = int(box.cls[0])
-            conf = float(box.conf[0])
-            bbox = box.xyxy[0].tolist()
-
-            class_name = self.model.names[cls_id]
-            if self.verbose:
-                print("Raw YOLO class:", class_name, "| confidence:", round(conf, 3))
-
-            # shift box back into full-image coordinates
-            bbox = [
-                bbox[0] + x_offset,
-                bbox[1] + y_offset,
-                bbox[2] + x_offset,
-                bbox[3] + y_offset,
-            ]
-
-            if class_name == "airplane" and conf >= self.aircraft_conf_threshold:
-                detections.append({
-                    "class": "aircraft",
-                    "confidence": conf,
-                    "bbox": bbox
-                })
-
-
-            elif (
-                    self.enable_vehicle_detection
-                    and class_name in ["car", "truck", "bus"]
-                    and conf >= self.vehicle_conf_threshold
-            ):
-                detections.append({
-                    "class": "vehicle",
-                    "confidence": conf,
-                    "bbox": bbox
-                })
-            # Vehicle detection is intentionally disabled for now because the COCO model
-            # is unreliable for small overhead vehicles in satellite imagery.
-            # This will be replaced later with a satellite/aerial vehicle model.
-
+        for result in results:
+            for box in result.boxes:
+                name = self.model.names[int(box.cls[0])]
+                confidence = float(box.conf[0])
+                target = None
+                if name == "airplane" and confidence >= settings.aircraft_confidence:
+                    target = "aircraft"
+                elif (settings.enable_vehicle_detection and name in ("car", "truck", "bus")
+                      and confidence >= settings.vehicle_confidence):
+                    target = "vehicle"
+                if target:
+                    x1, y1, x2, y2 = box.xyxy[0].tolist()
+                    detections.append({"class": target, "confidence": confidence,
+                                       "bbox": [x1+x_offset, y1+y_offset, x2+x_offset, y2+y_offset]})
         return detections
 
-    def predict(self, image_path: str):
-        image_path = Path(image_path)
-        image = cv2.imread(str(image_path))
-
-        if image is None:
-            raise FileNotFoundError(f"Could not read image: {image_path}")
-
+    def predict(self, image_path, settings=None, progress=None):
+        settings = settings or AnalysisSettings(enable_vehicle_detection=self.enable_vehicle_detection)
+        image = read_image(image_path)
         height, width = image.shape[:2]
-
-        tile_size = 640
-        stride = 320
-
-        all_detections = []
-
-        print("\nRunning sliding-window tiled detection")
-
-        for y in range(0, height, stride):
-            for x in range(0, width, stride):
-                x2 = min(x + tile_size, width)
-                y2 = min(y + tile_size, height)
-
-                tile_img = image[y:y2, x:x2]
-
-                if tile_img.shape[0] < 100 or tile_img.shape[1] < 100:
-                    continue
-
-                print(f"Running detection on tile x={x}, y={y}, w={x2 - x}, h={y2 - y}")
-
-                results = self.model(tile_img, conf=0.10, imgsz=1280)
-                tile_detections = self._process_yolo_results(
-                    results,
-                    x_offset=x,
-                    y_offset=y,
-                )
-                all_detections.extend(tile_detections)
-
-        print("\nRunning detection on full image")
-        full_results = self.model(str(image_path), conf=0.10, imgsz=1280)
-        full_detections = self._process_yolo_results(
-            full_results,
-            x_offset=0,
-            y_offset=0,
-        )
-        all_detections.extend(full_detections)
-
-        final_detections = remove_duplicate_detections(
-            all_detections,
-            iou_threshold=0.35,
-        )
-
-        return {
-            "image_path": str(image_path),
-            "detections": final_detections,
-        }
+        windows = []
+        if settings.tiled and (width > settings.tile_size or height > settings.tile_size):
+            windows = [(x, y) for y in tile_origins(height, settings.tile_size, settings.tile_stride)
+                       for x in tile_origins(width, settings.tile_size, settings.tile_stride)]
+        total, all_detections = len(windows)+1, []
+        class_ids = [i for i, name in self.model.names.items()
+                     if name == "airplane" or (settings.enable_vehicle_detection and name in ("car", "truck", "bus"))]
+        confidence = min(settings.aircraft_confidence, settings.vehicle_confidence) if settings.enable_vehicle_detection else settings.aircraft_confidence
+        # Ultralytics predictors are mutable; serialize shared model access.
+        with self._lock:
+            for index, (x, y) in enumerate(windows):
+                if progress:
+                    progress(index/total, f"Scanning tile {index+1} of {len(windows)}")
+                results = self.model.predict(image[y:y+settings.tile_size, x:x+settings.tile_size],
+                                             conf=confidence, imgsz=settings.inference_size,
+                                             classes=class_ids, verbose=self.verbose)
+                all_detections.extend(self._process_yolo_results(results, settings, x, y))
+            if progress:
+                progress(len(windows)/total, "Scanning full image")
+            results = self.model.predict(image, conf=confidence, imgsz=settings.inference_size,
+                                         classes=class_ids, verbose=self.verbose)
+            all_detections.extend(self._process_yolo_results(results, settings))
+        detections = remove_duplicate_detections(all_detections, settings.iou_threshold)
+        for d in detections:
+            x1, y1, x2, y2 = d["bbox"]
+            d["bbox"] = [max(0, min(width, x1)), max(0, min(height, y1)),
+                         max(0, min(width, x2)), max(0, min(height, y2))]
+        detections = [d for d in detections if d["bbox"][2] > d["bbox"][0] and d["bbox"][3] > d["bbox"][1]]
+        detections.sort(key=lambda d: (d["class"], d["bbox"][0], d["bbox"][1]))
+        counters = {}
+        for d in detections:
+            key = d["class"]
+            counters[key] = counters.get(key, 0)+1
+            d["id"] = f"{'A' if key == 'aircraft' else 'V'}{counters[key]:02d}"
+        if progress:
+            progress(1.0, "Detection complete")
+        return {"image_path": str(image_path), "width": width, "height": height,
+                "detections": detections, "inference_passes": total}

@@ -216,3 +216,8 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Local imagery, model weights, and generated analysis artifacts
+models/
+outputs/
+data/sample_images/

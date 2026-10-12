@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101713">
+  <title>STPS — Imagery Operations</title>
+  <link rel="icon" href="/static/mark.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/static/style.css">
+  <script src="/static/app.js" defer></script>
+</head>
+<body>
+  <aside class="sidebar">
+    <a class="brand" href="/" aria-label="STPS home"><img src="/static/mark.svg" alt=""><span>STPS<small>IMAGERY OPERATIONS</small></span></a>
+    <div class="workspace-label"><span class="status-dot"></span>LOCAL WORKSPACE</div>
+    <div class="nav-label">OPERATIONS</div>
+    <nav aria-label="Main navigation">
+      <a href="#workspace" class="nav-item active"><span class="nav-icon">⌖</span> Image analysis <span class="nav-number">01</span></a>
+      <a href="#history-panel" class="nav-item"><span class="nav-icon">◷</span> Recent analyses</a>
+      <button id="method-button" class="nav-item"><span class="nav-icon">▤</span> Analysis method</button>
+    </nav>
+    <div id="history-panel" class="history-panel"><div class="nav-label">RECENT RUNS <button id="refresh-history" title="Refresh recent runs" aria-label="Refresh recent runs">↻</button></div><div id="history"><p class="sidebar-note">Your analyses will appear here.</p></div></div>
+    <div class="system-card"><div><span class="status-dot" id="system-dot"></span><span id="system-status">CONNECTING</span></div><p>YOLOv8s · COCO</p><small id="model-status">Checking detector status…</small><div class="system-line"></div><small>Images processed on this computer.<br>Human verification required.</small></div>
+    <div class="sidebar-footer">STPS <span>v2.0 / PROTOTYPE</span></div>
+  </aside>
+  <main id="workspace">
+    <header class="topbar"><div><span class="breadcrumb">OPERATIONS</span><span class="slash">/</span> IMAGE ANALYSIS</div><div class="topbar-right"><span class="status-dot"></span> LOCAL ENGINE <span class="top-divider">|</span><time id="clock"></time></div></header>
+    <div class="mobile-tools"><button id="mobile-method">Analysis method</button><select id="mobile-history" aria-label="Open a recent analysis"><option value="">Recent analyses</option></select></div>
+    <div class="content">
+      <section class="page-heading"><div><div class="eyebrow">SATELLITE THREAT PERCEPTION SYSTEM</div><h1>Imagery intelligence<span>.</span></h1><p>Turn overhead imagery into a clear, reviewable assessment.</p></div><div class="heading-symbol" aria-hidden="true"><svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="46"/><circle cx="60" cy="60" r="28"/><path d="M60 4v112M4 60h112M27 27l66 66M93 27L27 93"/><circle class="blip" cx="81" cy="39" r="4"/><circle class="blip secondary" cx="38" cy="70" r="3"/></svg><span>OBSERVE / COMPARE / REVIEW</span></div></section>
+      <div class="section-title"><span><b>01</b> CONFIGURE ANALYSIS</span><span class="muted">SELECT A WORKFLOW</span></div>
+      <div class="mode-selector" role="group" aria-label="Analysis workflow">
+        <button class="mode-card selected" id="mode-comparison" data-mode="comparison" aria-pressed="true"><span class="mode-icon">⇄</span><span><strong>Change detection</strong><small>Compare before and after imagery</small></span><span class="mode-check">✓</span></button>
+        <button class="mode-card" id="mode-single" data-mode="single" aria-pressed="false"><span class="mode-icon">⌖</span><span><strong>Single image analysis</strong><small>Assess assets within one scene</small></span><span class="mode-check">✓</span></button>
+      </div>
+      <div class="workspace-grid">
+        <section class="panel imagery-panel">
+          <div class="panel-heading"><h2>Source imagery</h2><span class="chip" id="image-count">0 / 2 LOADED</span></div>
+          <div class="upload-grid" id="upload-grid">
+            <div class="upload-container"><div class="image-heading"><span><b class="image-index">A</b><span id="first-label">BEFORE IMAGE</span></span><span class="muted" id="first-role">BASELINE</span></div>
+              <label class="dropzone" id="drop-first" for="file-first"><input type="file" id="file-first" accept=".png,.jpg,.jpeg,.webp,.tif,.tiff" class="visually-hidden"><img class="upload-preview" id="preview-first" alt="First uploaded imagery" hidden><span class="upload-empty"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M10 16v-6h6M32 10h6v6M38 32v6h-6M16 38h-6v-6M24 14v18M14 24h20"/></svg><strong>Drop imagery here</strong><span>or <u>browse files</u></span><small>PNG, JPG, WebP, TIFF · up to 20 MB</small></span><span class="preview-overlay" hidden>CLICK TO REPLACE IMAGE</span><span class="corner tl"></span><span class="corner tr"></span><span class="corner bl"></span><span class="corner br"></span></label>
+              <div class="file-detail"><span id="info-first">No image selected</span><button class="remove-file" data-slot="first" aria-label="Remove first image" hidden>×</button></div>
+            </div>
+            <div class="upload-container" id="second-container"><div class="image-heading"><span><b class="image-index">B</b>AFTER IMAGE</span><span class="muted">COMPARISON</span></div>
+              <label class="dropzone" id="drop-second" for="file-second"><input type="file" id="file-second" accept=".png,.jpg,.jpeg,.webp,.tif,.tiff" class="visually-hidden"><img class="upload-preview" id="preview-second" alt="Second uploaded imagery" hidden><span class="upload-empty"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M10 16v-6h6M32 10h6v6M38 32v6h-6M16 38h-6v-6M24 14v18M14 24h20"/></svg><strong>Drop imagery here</strong><span>or <u>browse files</u></span><small>PNG, JPG, WebP, TIFF · up to 20 MB</small></span><span class="preview-overlay" hidden>CLICK TO REPLACE IMAGE</span><span class="corner tl"></span><span class="corner tr"></span><span class="corner bl"></span><span class="corner br"></span></label>
+              <div class="file-detail"><span id="info-second">No image selected</span><button class="remove-file" data-slot="second" aria-label="Remove second image" hidden>×</button></div>
+            </div>
+          </div>
+          <div class="imagery-note"><span>ⓘ</span><p id="input-note">Use the same ground area, crop, and scale in both images. Baseline first, later observation second.</p></div>
+        </section>
+        <aside class="panel settings-panel"><div class="panel-heading"><h2>Analysis parameters</h2><span class="tiny-tag">CONFIG</span></div>
+          <div class="settings-body"><label class="range-label" for="confidence">Aircraft confidence <output id="confidence-value">18%</output></label><input type="range" id="confidence" min="5" max="90" value="18"><p class="field-hint">Lower values retain more candidates and may increase false detections.</p>
+            <label class="toggle-row" for="tiled"><span><strong>Tiled scanning</strong><small>Overlapping passes for small assets</small></span><input type="checkbox" id="tiled" checked><span class="switch" aria-hidden="true"></span></label>
+            <details id="advanced"><summary>Advanced parameters <span>＋</span></summary><div class="advanced-body"><label for="resolution">Inference resolution</label><select id="resolution"><option value="640">640 px · standard</option><option value="1280">1280 px · detailed / slower</option></select><label class="range-label" for="proximity">Proximity distance <output id="proximity-value">8%</output></label><input type="range" id="proximity" min="1" max="25" value="8"><p class="field-hint">Fraction of image diagonal. Requires comparable scene extent; not a ground distance.</p><label class="check-row"><input type="checkbox" id="vehicles"> Include vehicles <span>EXPERIMENTAL</span></label></div></details>
+            <div class="run-info"><span>MODEL</span><strong>YOLOv8s <small>General imagery</small></strong><span>ACTIVITY RULE</span><strong>0–2 Low / 3–6 Medium / 7+ High</strong></div>
+            <button class="run-button" id="run-button" disabled><span>Run change detection</span><span>↗</span></button><p class="run-hint" id="run-hint">Upload both images to begin.</p>
+          </div>
+        </aside>
+      </div>
+      <div id="error" class="error-message" role="alert" hidden></div>
+      <section id="progress-panel" class="panel progress-panel" aria-live="polite" hidden><div class="progress-top"><span class="spinner"></span><strong id="progress-message">Submitting imagery…</strong><span id="progress-value">0%</span></div><div class="progress-track"><div id="progress-fill"></div></div><p>Keep this window open. Large tiled scans can take several minutes on CPU.</p></section>
+      <div class="section-title results-heading"><span><b>02</b> ASSESSMENT</span><span class="muted" id="result-meta">AWAITING ANALYSIS</span></div>
+      <section class="panel empty-results" id="empty-results"><div class="empty-radar" aria-hidden="true"><span></span><span></span><span></span><i></i></div><h2>Awaiting source imagery</h2><p>Load your images and run an analysis.<br>Detections, spatial metrics, and a reviewable report will appear here.</p><div class="empty-steps"><span>01 UPLOAD</span><b>→</b><span>02 ANALYZE</span><b>→</b><span>03 REVIEW</span></div></section>
+      <section id="results" hidden aria-label="Analysis results">
+        <div class="metric-grid" id="metrics"></div>
+        <div class="panel result-imagery"><div class="panel-heading"><h2>Detection overview</h2><div class="view-toggle" role="group" aria-label="Image view"><button data-view="annotated" class="selected" aria-pressed="true">Annotated</button><button data-view="original" aria-pressed="false">Original</button></div></div><div id="scene-images" class="scene-images"></div><div class="legend"><span><i class="legend-green"></i>Aircraft</span><span><i class="legend-amber"></i>Low confidence / vehicle</span><span class="legend-note">Scene labels are independent · click image to expand</span></div></div>
+        <div class="assessment-grid"><section class="panel assessment-panel"><div class="panel-heading"><h2>Analyst assessment</h2><span id="priority-chip" class="chip"></span></div><div class="assessment-body"><p id="assessment-text"></p><div id="scene-summaries"></div><div class="review-note"><span>ⓘ</span><div><strong>Review considerations</strong><ul id="warnings"></ul></div></div><div class="download-row"><a id="download-report" class="download-button" download>↓ Download report</a><a id="download-json" class="download-button secondary" download>↓ JSON data</a></div></div></section><section class="panel table-panel"><div class="panel-heading"><h2>Detected assets</h2><select id="table-scene" aria-label="Select scene for asset table"></select></div><div class="table-wrap"><table><thead><tr><th>ID</th><th>CLASS</th><th>CONFIDENCE</th><th>POSITION (PX)</th></tr></thead><tbody id="detections-table"></tbody></table></div><p class="table-note">Confidence is a model score, not a calibrated probability.</p></section></div>
+      </section>
+      <footer class="content-footer"><span>STPS / IMAGERY ANALYSIS WORKSPACE</span><span>Prototype assessment · human review required</span></footer>
+    </div>
+  </main>
+  <dialog id="image-dialog"><div class="dialog-top"><span id="dialog-title">Imagery preview</span><button class="close-dialog" aria-label="Close image preview">×</button></div><img id="dialog-image" alt="Expanded scene"></dialog>
+  <dialog id="method-dialog"><div class="dialog-top"><span>ANALYSIS METHOD</span><button class="close-dialog" aria-label="Close analysis method">×</button></div><div class="method-content"><h2>Evidence before interpretation.</h2><p>YOLOv8s detects generic aircraft using COCO weights. Overlapping tiles can help with small assets; duplicate boxes are suppressed by overlap.</p><h3>Scene assessment</h3><p>Activity measures detected asset presence: 0–2 LOW, 3–6 MEDIUM, 7+ HIGH. Aircraft groups are connected by a configurable proximity distance relative to image diagonal. Isolated aircraft have no nearby aircraft.</p><h3>Change assessment</h3><p>Trend score = 2 × aircraft change + vehicle change + 2 × activity rank change + 2 × proximity density change. Scores ≥2 indicate Increased, ≤−2 Decreased; otherwise Stable. Density is the share of possible aircraft pairs that are nearby.</p><p>Review priority is High for an absolute change of ≥2 aircraft or ≥4 vehicles; Medium for one aircraft, any vehicles, or a density shift of ≥25 percentage points; otherwise Low. Increases and decreases both receive review priority.</p><h3>Interpretation limits</h3><p>Images must cover the same ground area and scale. The system does not align images, identify aircraft types, or track individual assets. Counts and confidence scores do not establish movement, military intent, or threat. Verify the annotated boxes and imagery manually.</p><p>Uploads and outputs are saved locally in the project’s outputs/runs folder. First analysis downloads the public model weights if needed.</p></div></dialog>
+</body>
+</html>

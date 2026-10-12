@@ -1,146 +1,124 @@
 # Satellite Threat Perception System
 
-A computer vision and reasoning pipeline for analyzing overhead satellite imagery and identifying changes in military asset activity over time. The system detects aircraft, filters duplicate detections, analyzes spatial clustering, estimates activity level, and compares before/after images to generate an analyst-style change detection report.
+A local imagery analysis workspace for single-scene aircraft detection and before/after comparison. The v2 interface combines a defence-style operations console with real YOLOv8s inference, transparent spatial reasoning, annotated imagery, and downloadable reports.
 
-## Why I Built This
+## Start the interface
 
-I built this project to explore how AI can support satellite-based situational awareness and defense-oriented imagery analysis. Rather than only running object detection, I wanted to build a fuller pipeline that interprets detections, handles uncertainty, and explains why a scene may require human review.
+Requires Python 3.10 or later. From the project directory:
 
-## Features
+```powershell
+python -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+.\.venv\Scripts\python.exe run_ui.py
+```
 
-* Aircraft detection in satellite imagery using YOLOv8
-* Sliding-window tiled inference for improved small-object detection
-* Confidence filtering and IoU-based duplicate detection removal
-* Spatial clustering analysis to identify grouped vs. isolated assets
-* Activity level estimation: LOW, MEDIUM, HIGH
-* Analyst-style natural language summaries
-* Before/after change detection between two satellite images
-* Priority scoring for activity changes
-* Final annotated output images and text-based change reports
+The app opens at **http://127.0.0.1:8000**. The included `start.ps1` also creates an environment and installs dependencies if needed:
 
-## Tech Stack
+```powershell
+.\start.ps1
+```
 
-* Python
-* OpenCV
-* YOLOv8 / Ultralytics
-* NumPy
-* Basic spatial analysis and rule-based reasoning
-* Rule-based explainable reasoning
+If your PowerShell policy prevents script execution, use the Python commands above. No policy change is necessary. On macOS/Linux, use `.venv/bin/python` in place of `.venv\Scripts\python.exe`.
 
-## Project Structure
+To use another port or skip automatic browser opening:
+
+```powershell
+.\.venv\Scripts\python.exe run_ui.py --port 8001 --no-browser
+```
+
+Stop the server with Ctrl+C in its terminal. It binds only to the local computer. There is no public deployment or remote inference service.
+
+The first analysis downloads the public pretrained `yolov8s.pt` weights (about 22 MB) into `models/`. Later runs reuse them and can work offline. CPU inference is supported; tiled scanning and 1280-pixel inference take longer, especially for large images. The model loads only when an analysis starts, so the interface is usable before it initializes.
+
+## Use the workspace
+
+1. Select **Change detection** to upload baseline and later-observation images, or **Single image analysis** to upload one scene.
+2. Drop an image into each required slot or browse for files. PNG, JPEG, WebP, and single-frame TIFF are supported. Each file must be at most 20 MB, at least 32 px per side, no more than 4096 px per side, and no more than 16 megapixels. TIFF previews may be unavailable in the browser; the server can still decode them. Uploads are validated from their contents and EXIF orientation is applied.
+3. Set the aircraft confidence threshold. Tiled scanning is enabled by default. Advanced parameters expose inference resolution, proximity distance, and experimental vehicle detection.
+4. Run analysis and follow the actual inference progress. A single worker serializes model access; up to four active/queued runs are accepted.
+5. Review annotated images, switch to originals, expand imagery, inspect the asset table, and download the text report or structured JSON.
+6. Reopen completed analyses from Recent analyses. Runs persist across server restarts; interrupted runs are marked failed and can be submitted again. Recent runs and method information are available on mobile as well.
+
+Each run has a unique directory under `outputs/runs/<uuid>/`. It contains normalized source PNGs, annotated JPEGs, `report.txt`, `result.json`, and lifecycle metadata in `job.json`. New analyses do not overwrite earlier runs. Uploads and generated outputs are excluded from Git. Files remain in this workspace; a workspace located in a cloud-synced folder follows that folder's normal sync behavior.
+
+## How analysis works
+
+**Detection.** YOLOv8s uses general COCO weights, restricted to aircraft classes by default. For larger images, inference runs on 640 px overlapping tiles with a 320 px stride and on the full scene. Edge tiles cover the boundary without tiny trailing crops. Inference resolution is configurable at 640 or 1280 px. `airplane` maps to `aircraft`; optional `car`, `truck`, and `bus` map to `vehicle`. Same-class overlapping boxes are suppressed in confidence order at IoU >0.35. Boxes use original-image pixel coordinates and receive stable labels within each scene, such as A01 or V01.
+
+**Spatial reasoning.** Aircraft centers are linked when separated by less than a configurable fraction of the image diagonal (default 8%). Connected components of two or more aircraft are proximity groups. An isolated aircraft has no neighbors. Nearby pairs and distinct groups are reported separately. Proximity density is nearby pairs divided by all possible aircraft pairs; this avoids a raw pair count that grows quadratically dominating comparisons. Relative-image distances remain consistent when the same image is resized; they do not compensate for different ground coverage, crops, or geographic resolution.
+
+**Activity.** Detected aircraft plus enabled vehicle detections determine observed asset presence: LOW for 0–2, MEDIUM for 3–6, HIGH for 7+. Activity does not establish movement or intent. Aircraft scores below 40% produce visible review flags and caveats. Disabled vehicles are reported as **not analyzed**, rather than interpreted as absent.
+
+**Change.** The app compares aggregate scene counts, nearby-pair density, and activity rank (LOW=0, MEDIUM=1, HIGH=2):
 
 ```text
-Satellite-Threat-Perception-System/
-├── config.py
-├── run_mvp.py
-├── run_change_detection.py
-├── src/
-│   ├── detection/
-│   │   └── detector.py
-│   └── reasoning/
-│       ├── activity.py
-│       ├── spatial.py
-│       └── change_detection.py
-├── data/
-│   └── sample_images/
-└── outputs/
+trend score = 2 × aircraft change + vehicle change
+            + 2 × activity rank change + 2 × proximity density change
+
+score >= 2   Increased
+score <= -2  Decreased
+otherwise    Stable
 ```
 
-## How It Works
+Review priority uses absolute change, so departures receive review priority too:
 
-### 1. Detection
+| Priority | Rule |
+| --- | --- |
+| High | At least 2 aircraft or 4 vehicles changed |
+| Medium | 1 aircraft, any vehicles, or at least 25 percentage points of proximity density changed |
+| Low | Otherwise |
 
-The detector uses a pretrained YOLOv8s model trained on COCO classes to identify aircraft in satellite imagery. Because aircraft can appear small in overhead images, the system runs both full-image inference and sliding-window tiled inference.
+Reports explain the rules and priority reasons. Both scene caveats and comparison caveats are visible. Low-confidence detections still contribute to counts; their caveats are propagated rather than silently discarded. Differing aspect ratios trigger a comparison warning. Even equal-size images require a human to verify comparable ground coverage and scale.
 
-### 2. Filtering
+## Command-line workflows
 
-Raw detections are filtered using class-specific confidence thresholds. Duplicate boxes are removed using Intersection over Union (IoU), keeping the highest-confidence detection when boxes overlap.
+Both CLI runners use the same pipeline and settings as the interface:
 
-### 3. Spatial Reasoning
+```powershell
+.\.venv\Scripts\python.exe run_mvp.py --image "C:\imagery\scene.png"
+.\.venv\Scripts\python.exe run_change_detection.py --before "C:\imagery\before.png" --after "C:\imagery\after.png"
+```
 
-Detected aircraft are converted into center points. The system computes pairwise distances and identifies aircraft cluster relationships based on a distance threshold. This helps distinguish localized staging activity from dispersed assets.
+Use `--help` for confidence, proximity, resolution, tiling, vehicles, and output-directory options. The original default paths still work if you supply `data/sample_images/example.png`, `before.png`, and `after.png`. No sample imagery is bundled. CLI runs in the default output directory also appear in UI history.
 
-### 4. Activity Assessment
-
-The system estimates activity level using aircraft counts and spatial clustering patterns. It also flags low-confidence detections so the summary can communicate uncertainty instead of overstating model reliability.
-
-### 5. Change Detection
-
-For before/after images, the pipeline compares:
-
-* Aircraft count
-* Vehicle count
-* Aircraft cluster relationships
-* Activity level
-
-It then assigns an activity trend and review priority.
-
-## Example Output
-
-Example change summary:
+## Project structure
 
 ```text
-SATELLITE CHANGE DETECTION REPORT
-
-BEFORE IMAGE ANALYSIS
-Aircraft detected: 5
-Vehicles detected: 0
-Aircraft cluster pairs: 10
-Activity level: MEDIUM
-
-AFTER IMAGE ANALYSIS
-Aircraft detected: 13
-Vehicles detected: 0
-Aircraft cluster pairs: 69
-Activity level: HIGH
-
-CHANGE ASSESSMENT
-Aircraft change: +8
-Vehicle change: 0
-Cluster change: +59
-Activity level change: MEDIUM -> HIGH
-Activity trend: Increased
-Review priority: High
-
-Analyst-style change summary:
-Aircraft count changed from 5 to 13 (+8). Vehicle count changed from 0 to 0 (0).
-Aircraft cluster relationships changed from 10 to 69 (+59). Overall activity increased from MEDIUM to HIGH.
-Activity trend is assessed as Increased. Review priority is assessed as High.
-This assessment is based on model detections and should be reviewed by a human analyst.
+app.py                  Local API, uploads, queue, status, history, artifacts
+run_ui.py / start.ps1    Launchers
+web/                    HTML, CSS, JavaScript, and SVG brand mark
+config.py               Shared validated settings and paths
+detector.py             YOLO inference, tiling, coordinate mapping, suppression
+spatial.py              Proximity pairs, groups, isolation, density
+activity.py             Activity classification and scene prose
+change_detection.py     Temporal comparison, priorities, caveats
+pipeline.py             Shared orchestration, annotations, JSON, reports
+cli.py                  Argument parsing and normalized CLI inputs
+run_mvp.py              Single-scene CLI entrypoint
+run_change_detection.py Two-scene CLI entrypoint
+tests/                  Reasoning, inference adapters, uploads, API, persistence
+models/                 Downloaded weights (ignored)
+outputs/                Local run artifacts (ignored)
 ```
 
-## Important Limitations
+The original broken `src.*` imports have been replaced with the actual flat module layout. Shared configuration and analysis functions replace duplicated runner logic. `PROJECT_UNDERSTANDING.md` preserves the historical review of the original version.
 
-This is a prototype and should not be treated as an operational intelligence system.
+## Validation
 
-* The detector uses a general COCO-trained YOLO model, not a satellite-specific model.
-* Small, low-contrast, partially obscured, or unusual aircraft may be missed.
-* Vehicle detection is currently disabled because the base model is unreliable for small overhead vehicles.
-* Some test imagery was synthetically generated for experimentation because suitable public before/after satellite images were difficult to find.
-* Human analyst review is required before drawing any real-world conclusions.
-
-## Future Improvements
-
-* Fine-tune on satellite/aerial datasets such as DOTA or xView
-* Reintroduce vehicle detection using an aerial imagery-specific model
-* Add a chatbot-style interface for querying detections and reports
-* Improve geospatial reasoning using coordinates and location-aware analysis
-* Extend from two-image comparison to multi-temporal tracking across longer observation windows
-
-## Main Scripts
-
-Run single-image MVP analysis:
-
-```bash
-python run_mvp.py
+```powershell
+.\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
+.\.venv\Scripts\python.exe -m pytest
+node --check web/app.js
 ```
 
-Run before/after change detection:
+Tests cover activity boundaries, group/isolation correctness, resizing behavior, duplicate suppression, tile coverage, class mapping and offsets, symmetric priorities, bounded spatial scoring, uncertainty propagation, upload validation, EXIF orientation, multi-page rejection, artifacts, background failures, queue limits, restart recovery, and transient Windows file locks. API tests use a deterministic fake detector and require no model download. Real pretrained-model execution is checked separately and is not a measure of detector accuracy.
 
-```bash
-python run_change_detection.py
-```
+Framework APIs follow the [FastAPI upload documentation](https://fastapi.tiangolo.com/tutorial/request-files/) and [Ultralytics prediction documentation](https://docs.ultralytics.com/modes/predict). Shared predictor access is serialized in accordance with [Ultralytics thread-safety guidance](https://docs.ultralytics.com/guides/yolo-thread-safe-inference).
 
-## Notes
+## Limitations and next improvements
 
-This project was built as a personal AI and computer vision project focused on defense technology, satellite imagery interpretation, and reasoning around imperfect model outputs.
+This remains a prototype. General COCO weights can miss small or atypical overhead aircraft and can produce false positives. Vehicle detection is experimental. The system does not identify aircraft types, ownership, military intent, or an actual threat. No detections does not prove no assets are present. Confidence scores are not calibrated probabilities.
+
+The comparison is an aggregate detection comparison, not pixel-level change segmentation or cross-image asset tracking. There is no image registration, ground-distance normalization, geospatial metadata interpretation, or verification that two images show the same area. Priority is a transparent heuristic, not a validated operational score. Labeled aerial/satellite imagery is required to measure precision and recall and fine-tune a domain-specific model. No improved detection-accuracy claim is made without those measurements.
+
+Human review of the original imagery and annotated boxes is required before conclusions are drawn.
