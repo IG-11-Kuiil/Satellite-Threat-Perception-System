@@ -1,6 +1,6 @@
-# Athena
+# Athena - Satellite Threat Perception System
 
-Athena is a local imagery analysis workspace for single-scene aircraft detection and before/after comparison. The interface combines a defence-style operations console with aerial-model inference, transparent spatial reasoning, rotated annotations, and downloadable reports.
+Athena is a **Satellite Threat Perception System**: a local imagery analysis workspace for single-scene aircraft detection and before/after comparison. The interface combines a defence-style operations console with aerial-model inference, transparent spatial reasoning, rotated annotations, and downloadable reports.
 
 **Assessment scope:** LOW/MEDIUM/HIGH are demonstration asset-presence bands. Review priority is a prototype triage rule. Neither is a military threat rating, and formal analytic confidence is **not assessed**. See [assessment policy and published guidance](docs/ASSESSMENT_POLICY.md).
 
@@ -137,3 +137,13 @@ This remains a prototype. Aerial weights can still miss small or atypical aircra
 The comparison is an aggregate detection comparison, not pixel-level change segmentation or cross-image asset tracking. There is no image registration, ground-distance normalization, geospatial metadata interpretation, or verification that two images show the same area. Priority is a transparent heuristic, not a validated operational score. Labeled aerial/satellite imagery is required to measure precision and recall and fine-tune a domain-specific model. No improved detection-accuracy claim is made without those measurements.
 
 Human review of the original imagery and annotated boxes is required before conclusions are drawn.
+
+## Copyright and licensing
+
+Copyright (c) 2026 Shaurya Singh. All rights reserved for new original contributions first published under the current [rights notice](LICENSE). The repository remains public for demonstration, portfolio, and source inspection. This is not an open-source license grant for those new contributions; reuse, modification, redistribution, execution, or commercial exploitation requires prior written permission unless another applicable license or law already permits it. GitHub platform viewing/forking permissions remain applicable.
+
+**Existing MIT permissions remain.** Earlier revisions through commit `a792e613fa24bae22dea69469bcff280d8752e03` were published with an MIT license. This notice does not retract permissions for that previously published code, including portions carried into later revisions. The [previous MIT text](docs/licenses/MIT-previous.txt) is preserved. The change cannot make already-published MIT code exclusive.
+
+**Third-party licensing is separate and unresolved for proprietary use.** Athena currently imports Ultralytics and uses YOLO11s-OBB, YOLO26m-OBB, and optionally YOLOv8s weights. The installed Ultralytics package reports AGPL-3.0; the vendor describes AGPL-3.0 and Enterprise licensing routes for its software and models. Our rights notice does not override those terms, and downloaded weights being excluded from Git does not settle application licensing. No Enterprise license or complete compatibility audit is evidenced in this repository. See [third-party licensing notes](THIRD_PARTY_NOTICES.md) and [Ultralytics licensing](https://www.ultralytics.com/license).
+
+Before proprietary deployment or distribution of the integrated application, resolve the applicable dependency obligations: obtain suitable vendor terms, replace affected components with compatible alternatives, or release the covered application under compliant terms. This repository does not claim that a rights-reserved Ultralytics integration is already compliant. Commercial use is not categorically forbidden by AGPL; its obligations must be met. Review the complete dependency and asset licenses for the intended product with qualified counsel.

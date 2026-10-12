@@ -1,21 +1,30 @@
-MIT License
+ATHENA - COPYRIGHT AND RIGHTS NOTICE
 
-Copyright (c) 2026 Shaurya Singh
+Copyright (c) 2026 Shaurya Singh.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+All rights reserved for original contributions first published under this
+notice, except rights granted separately or required by applicable law.
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+This repository is publicly available for demonstration, portfolio, and
+source inspection. For those new original contributions, no license is granted
+to execute, copy, modify, distribute, sublicense, or commercially exploit the
+software without prior written permission from the copyright holder, except
+as otherwise permitted by applicable law, GitHub's platform terms, or an
+applicable existing license. This notice is not an open-source license.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+PRIOR MIT LICENSE
+Earlier revisions through commit a792e613fa24bae22dea69469bcff280d8752e03
+were published under MIT. Existing permissions for that code remain, including
+previously published portions present in subsequent revisions. This notice
+does not revoke those permissions or remove the requirement to retain their
+MIT copyright and license notices. The prior text is preserved at
+ docs/licenses/MIT-previous.txt.
+
+THIRD-PARTY MATERIAL
+Third-party code, packages, weights, datasets, and other material are governed
+by their respective licenses. This notice does not replace or restrict rights
+under those licenses. In particular, it does not override Ultralytics AGPL-3.0
+or Enterprise terms or establish that the integrated application is cleared
+for proprietary use. See THIRD_PARTY_NOTICES.md.
+
+No warranty or fitness for operational use is promised by this notice.
