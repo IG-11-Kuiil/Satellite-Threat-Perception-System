@@ -18,7 +18,7 @@ from config import (AnalysisSettings, MAX_IMAGE_PIXELS, MAX_IMAGE_SIDE, MAX_UPLO
 from pipeline import execute_analysis
 
 logger = logging.getLogger(__name__)
-app = FastAPI(title="Satellite Threat Perception System", version="2.0.0")
+app = FastAPI(title="Athena Imagery Operations", version="2.0.0")
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="imagery")
 jobs = {}
@@ -217,4 +217,4 @@ def artifact(job_id: str, filename: str):
     if not path.is_file():
         raise HTTPException(404, "Artifact not found.")
     download = filename in ("report.txt", "result.json")
-    return FileResponse(path, filename=f"stps_{job_id[:8]}_{filename}" if download else None)
+    return FileResponse(path, filename=f"athena_{job_id[:8]}_{filename}" if download else None)

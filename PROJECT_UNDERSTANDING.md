@@ -1,4 +1,4 @@
-# Satellite Threat Perception System: code understanding
+# Athena: code understanding
 
 > Historical baseline review, written before the v2 improvements. The execution blockers and reasoning issues below describe commit `650ecc7`. See README.md for the current implementation, setup, and limitations.
 

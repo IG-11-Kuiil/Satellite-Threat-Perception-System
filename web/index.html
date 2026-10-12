@@ -4,14 +4,14 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#101713">
-  <title>STPS — Imagery Operations</title>
+  <title>Athena — Imagery Operations</title>
   <link rel="icon" href="/static/mark.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/static/style.css">
   <script src="/static/app.js" defer></script>
 </head>
 <body>
   <aside class="sidebar">
-    <a class="brand" href="/" aria-label="STPS home"><img src="/static/mark.svg" alt=""><span>STPS<small>IMAGERY OPERATIONS</small></span></a>
+    <a class="brand" href="/" aria-label="Athena home"><img src="/static/mark.svg" alt=""><span>ATHENA<small>IMAGERY OPERATIONS</small></span></a>
     <div class="workspace-label"><span class="status-dot"></span>LOCAL WORKSPACE</div>
     <div class="nav-label">OPERATIONS</div>
     <nav aria-label="Main navigation">
@@ -20,13 +20,13 @@
     </nav>
     <div id="history-panel" class="history-panel"><div class="nav-label">RECENT RUNS <button id="refresh-history" title="Refresh recent runs" aria-label="Refresh recent runs">↻</button></div><div id="history"><p class="sidebar-note">Your analyses will appear here.</p></div></div>
     <div class="system-card"><div><span class="status-dot" id="system-dot"></span><span id="system-status">CONNECTING</span></div><p id="engine-model">YOLO11s-OBB · DOTA v1</p><small id="model-status">Checking detector status…</small><div class="system-line"></div><small>Images processed on this computer.<br>Human verification required.</small></div>
-    <div class="sidebar-footer">STPS <span>v2.0 / PROTOTYPE</span></div>
+    <div class="sidebar-footer">ATHENA <span>v2.0 / PROTOTYPE</span></div>
   </aside>
   <main id="workspace">
     <header class="topbar"><div><span class="breadcrumb">OPERATIONS</span><span class="slash">/</span> IMAGE ANALYSIS</div><div class="topbar-right"><span class="status-dot"></span> LOCAL ENGINE <span class="top-divider">|</span><time id="clock"></time></div></header>
     <div class="mobile-tools"><button id="mobile-method">Analysis method</button><select id="mobile-history" aria-label="Open a recent run"><option value="">Recent runs</option></select></div>
     <div class="content">
-      <section class="page-heading"><div><div class="eyebrow">SATELLITE THREAT PERCEPTION SYSTEM</div><h1>Imagery intelligence<span>.</span></h1><p>Turn overhead imagery into a clear, reviewable assessment.</p></div><div class="heading-symbol" aria-hidden="true"><svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="46"/><circle cx="60" cy="60" r="28"/><path d="M60 4v112M4 60h112M27 27l66 66M93 27L27 93"/><circle class="blip" cx="81" cy="39" r="4"/><circle class="blip secondary" cx="38" cy="70" r="3"/></svg><span>OBSERVE / COMPARE / REVIEW</span></div></section>
+      <section class="page-heading"><div><div class="eyebrow">ATHENA / SATELLITE IMAGERY ANALYSIS</div><h1>Imagery intelligence<span>.</span></h1><p>Turn overhead imagery into a clear, reviewable assessment.</p></div><div class="heading-symbol" aria-hidden="true"><svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="46"/><circle cx="60" cy="60" r="28"/><path d="M60 4v112M4 60h112M27 27l66 66M93 27L27 93"/><circle class="blip" cx="81" cy="39" r="4"/><circle class="blip secondary" cx="38" cy="70" r="3"/></svg><span>OBSERVE / COMPARE / REVIEW</span></div></section>
       <div class="section-title"><span><b>01</b> CONFIGURE ANALYSIS</span><span class="muted">SELECT A WORKFLOW</span></div>
       <div class="mode-selector" role="group" aria-label="Analysis workflow">
         <button class="mode-card selected" id="mode-comparison" data-mode="comparison" aria-pressed="true"><span class="mode-icon">⇄</span><span><strong>Change detection</strong><small>Compare before and after imagery</small></span><span class="mode-check">✓</span></button>
@@ -65,7 +65,7 @@
         <div class="panel result-imagery"><div class="panel-heading"><h2>Detection overview<small id="result-model"></small></h2><div class="view-toggle" role="group" aria-label="Image view"><button data-view="annotated" class="selected" aria-pressed="true">Annotated</button><button data-view="original" aria-pressed="false">Original</button></div></div><div id="scene-images" class="scene-images"></div><div class="legend"><span><i class="legend-green"></i>Aircraft</span><span><i class="legend-amber"></i>Low confidence / vehicle</span><span class="legend-note">Scene labels are independent · click image to expand</span></div></div>
         <div class="assessment-grid"><section class="panel assessment-panel"><div class="panel-heading"><h2>Automated assessment</h2><span id="priority-chip" class="chip"></span></div><div class="assessment-body"><p id="assessment-text"></p><div id="policy-caption" class="policy-caption"></div><div id="scene-summaries"></div><div class="review-note"><span>ⓘ</span><div><strong>Review considerations</strong><ul id="warnings"></ul></div></div><div class="download-row"><a id="download-report" class="download-button" download>↓ Download report</a><a id="download-json" class="download-button secondary" download>↓ JSON data</a></div></div></section><section class="panel table-panel"><div class="panel-heading"><h2>Detected assets</h2><select id="table-scene" aria-label="Select scene for asset table"></select></div><div class="table-wrap"><table><thead><tr><th>ID</th><th>CLASS</th><th>CONFIDENCE</th><th>POSITION (PX)</th></tr></thead><tbody id="detections-table"></tbody></table></div><p class="table-note">Confidence is a model score, not a calibrated probability.</p></section></div>
       </section>
-      <footer class="content-footer"><span>STPS / IMAGERY ANALYSIS WORKSPACE</span><span>Prototype assessment · human review required</span></footer>
+      <footer class="content-footer"><span>ATHENA / IMAGERY ANALYSIS WORKSPACE</span><span>Prototype assessment · human review required</span></footer>
     </div>
   </main>
   <dialog id="image-dialog"><div class="dialog-top"><span id="dialog-title">Imagery preview</span><button class="close-dialog" aria-label="Close image preview">×</button></div><img id="dialog-image" alt="Expanded scene"></dialog>

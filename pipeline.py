@@ -85,7 +85,7 @@ def save_annotation(analysis, output_path):
 
 
 def build_report(result):
-    lines = ["SATELLITE THREAT PERCEPTION SYSTEM", "IMAGERY ANALYSIS REPORT", "",
+    lines = ["ATHENA / SATELLITE IMAGERY ANALYSIS", "IMAGERY ANALYSIS REPORT", "",
              f"Run: {result['id']}", f"Created: {result['created_at']}",
              f"Mode: {result['mode']}", f"Model: {result['model']}", ""]
     for label, scene in result["scenes"].items():

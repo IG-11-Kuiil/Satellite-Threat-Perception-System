@@ -1,6 +1,6 @@
-# Satellite Threat Perception System
+# Athena
 
-A local imagery analysis workspace for single-scene aircraft detection and before/after comparison. The interface combines a defence-style operations console with aerial-model inference, transparent spatial reasoning, rotated annotations, and downloadable reports.
+Athena is a local imagery analysis workspace for single-scene aircraft detection and before/after comparison. The interface combines a defence-style operations console with aerial-model inference, transparent spatial reasoning, rotated annotations, and downloadable reports.
 
 **Assessment scope:** LOW/MEDIUM/HIGH are demonstration asset-presence bands. Review priority is a prototype triage rule. Neither is a military threat rating, and formal analytic confidence is **not assessed**. See [assessment policy and published guidance](docs/ASSESSMENT_POLICY.md).
 
