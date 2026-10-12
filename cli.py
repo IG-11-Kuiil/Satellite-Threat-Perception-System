@@ -21,12 +21,14 @@ def run(comparison=False):
     parser.add_argument("--proximity", type=float, default=0.08, help="Fraction of image diagonal")
     parser.add_argument("--no-tiles", action="store_true", help="Run full-image inference only")
     parser.add_argument("--vehicles", action="store_true", help="Enable experimental vehicle detection")
+    parser.add_argument("--no-verification", action="store_true", help="Disable second-model review of weak aerial candidates")
     parser.add_argument("--resolution", type=int, choices=(640, 1024, 1280), default=1024)
     parser.add_argument("--output-dir", type=Path, default=OUTPUTS_DIR / "runs")
     args = parser.parse_args()
     try:
         settings = AnalysisSettings(model_profile=args.model, aircraft_confidence=args.confidence, cluster_distance_fraction=args.proximity,
                                     tiled=not args.no_tiles, enable_vehicle_detection=args.vehicles,
+                                    verify_weak_detections=not args.no_verification,
                                     inference_size=args.resolution)
         paths = {"before": args.before, "after": args.after} if comparison else {"scene": args.image}
         normalized = {}

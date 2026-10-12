@@ -1,6 +1,7 @@
 """Run actual aerial-model predictions on a supplied image; write local evidence."""
 import argparse
 import json
+import hashlib
 import sys
 import time
 from pathlib import Path
@@ -17,7 +18,7 @@ parser.add_argument("--tiles", action="store_true")
 args = parser.parse_args()
 image = read_image(args.image)
 height, width = image.shape[:2]
-output = Path("outputs/verification/models")
+output = Path("outputs/verification/models") / hashlib.sha256(args.image.read_bytes()).hexdigest()[:12]
 output.mkdir(parents=True, exist_ok=True)
 MODELS_DIR.mkdir(parents=True, exist_ok=True)
 for filename in args.models:

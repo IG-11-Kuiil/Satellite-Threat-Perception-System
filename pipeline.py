@@ -19,14 +19,21 @@ def analyze_image(detector, image_path, settings=None, progress=None, filename=N
     vehicle_count = sum(d["class"] == "vehicle" for d in detections)
     spatial = analyze_spatial(detections, result["width"], result["height"], settings.cluster_distance_fraction)
     low_count = sum(d["class"] == "aircraft" and d["confidence"] < LOW_CONFIDENCE_THRESHOLD for d in detections)
+    review_candidates = sum(d["class"] == "aircraft" and d.get("accepted_by") == "cross_model_review" for d in detections)
+    review_count = sum(d["class"] == "aircraft" and d.get("review_required",d["confidence"] < LOW_CONFIDENCE_THRESHOLD) for d in detections)
     activity = compute_activity_level(aircraft_count, vehicle_count)
     dataset = result.get("dataset", MODEL_PROFILES[settings.model_profile]["dataset"])
     warnings = [f"{dataset}-trained detector; aircraft may still be missed or misclassified. Aircraft type is not identified."]
+    if result.get("verification_warning"):
+        warnings.append(result["verification_warning"])
     truncated = sum(d.get("edge_truncated", False) for d in detections)
     if truncated:
         warnings.append(f"{truncated} detection(s) touch an internal tile edge and have no matching complete box; check for partial aircraft.")
     if low_count:
         warnings.append(f"{low_count} aircraft detection(s) have confidence below 40%.")
+    if review_candidates:
+        warnings.append(f"{review_candidates} subthreshold candidate(s) retained by two-model overlap agreement. These are included in the total, but require manual confirmation; scores were not increased.")
+    warnings.append("Clouds, shadows, and differing visibility can hide aircraft. Compare visible coverage before interpreting a count difference.")
     if not aircraft_count:
         warnings.append("No aircraft detected. This does not confirm aircraft are absent.")
     if settings.enable_vehicle_detection:
@@ -38,10 +45,13 @@ def analyze_image(detector, image_path, settings=None, progress=None, filename=N
             "vehicles_enabled": settings.enable_vehicle_detection,
             "clusters": spatial["pairs"], "spatial": spatial, "activity_level": activity,
             "low_confidence_count": low_count,
+            "review_required_count":review_count,"review_candidate_count":review_candidates,
+            "primary_aircraft_count":aircraft_count-review_candidates,
             "mean_confidence": round(sum(d["confidence"] for d in detections)/len(detections), 4) if detections else None,
             "warnings": warnings,
             "summary": generate_summary(aircraft_count, vehicle_count, activity, spatial["pairs"],
-                                        bool(low_count), spatial, settings.enable_vehicle_detection)}
+                                        bool(low_count), spatial, settings.enable_vehicle_detection)
+                       +(f" Total includes {review_candidates} cross-model candidate(s) requiring manual confirmation." if review_candidates else "")}
 
 
 def save_annotation(analysis, output_path):
@@ -54,15 +64,19 @@ def save_annotation(analysis, output_path):
         if detection["confidence"] < LOW_CONFIDENCE_THRESHOLD:
             color = (65, 175, 255)
         label = f"{detection['id']} {detection['confidence']:.0%}"
+        if detection.get("accepted_by") == "cross_model_review":
+            label = f"{detection['id']} REVIEW"
         if detection.get("polygon"):
             cv2.polylines(image, [np.round(detection["polygon"]).astype(np.int32)], True, color, thickness, cv2.LINE_AA)
         else:
             cv2.rectangle(image, (x1, y1), (x2, y2), color, thickness)
-        (tw, th), baseline = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, font_scale, 1)
+        (tw, _), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, font_scale, 1)
+        label_scale = max(.35,min(font_scale,font_scale*max(60,x2-x1)/max(1,tw)))
+        (tw, th), baseline = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, label_scale, 1)
         tx = max(0, min(x1, analysis["width"]-tw-8))
         ty = max(th+7, y1-5)
         cv2.rectangle(image, (tx, ty-th-5), (tx+tw+7, ty+baseline+2), (20, 27, 24), -1)
-        cv2.putText(image, label, (tx+3, ty), cv2.FONT_HERSHEY_SIMPLEX, font_scale, color, 1, cv2.LINE_AA)
+        cv2.putText(image, label, (tx+3, ty), cv2.FONT_HERSHEY_SIMPLEX, label_scale, color, 1, cv2.LINE_AA)
     ok, buffer = cv2.imencode(".jpg", image, [cv2.IMWRITE_JPEG_QUALITY, 94])
     if not ok:
         raise OSError("Could not encode the annotated image.")
@@ -82,9 +96,13 @@ def build_report(result):
                   f"Isolated aircraft: {scene['spatial']['isolated_count']}",
                   f"Nearby pairs: {len(scene['clusters'])}", f"Activity: {scene['activity_level']}",
                   f"Low-confidence aircraft: {scene['low_confidence_count']}", scene["summary"], ""]
+        lines += [f"Primary aircraft detections: {scene.get('primary_aircraft_count',scene['aircraft_count'])}",
+                  f"Cross-model candidates requiring confirmation: {scene.get('review_candidate_count',0)}"]
         lines.append(f"Duplicate/invalid candidates removed: {scene.get('duplicates_removed', 0)}")
         for detection in scene["detections"]:
             lines.append(f"  {detection['id']} | {detection['class']} | {detection['confidence']:.1%} | bbox {detection['bbox']}")
+            if detection.get("supporting_model"):
+                lines.append(f"    REVIEW candidate | Supporting {detection['supporting_model']}: {detection['supporting_confidence']:.1%}; primary score unchanged")
         lines += ["", "Scene caveats:"]+[f"- {warning}" for warning in scene["warnings"]]+[""]
     if result.get("change"):
         lines += ["CHANGE ASSESSMENT", result["change_summary"],
@@ -98,6 +116,7 @@ def build_report(result):
               "Review priority: High for >=2 aircraft or >=4 vehicles changed (absolute).",
               "Medium for 1 aircraft, any vehicles, or >=25 percentage points of density change; otherwise Low.",
               "Proximity: connected aircraft groups using a fraction of image diagonal, not geographic distance.",
+              "Subthreshold candidates are included only with an overlapping second aerial model above the selected threshold, and remain manual-review candidates.",
               "", "LIMITATIONS", "Counts do not establish military intent, movement, or threat.",
               "No image registration, geospatial normalization, or cross-image identity matching.",
               "Human verification is required; confidence scores are not calibrated probabilities."]

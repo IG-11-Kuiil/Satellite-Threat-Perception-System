@@ -64,6 +64,12 @@ def compare_scenes(previous_analysis, current_analysis):
                 "Detection differences may reflect visibility or model errors rather than physical changes."]
     if previous_analysis.get("low_confidence_count", 0) or current_analysis.get("low_confidence_count", 0):
         warnings.append("Low-confidence aircraft detections contribute to this comparison; verify those boxes before accepting count changes.")
+    before_primary = previous_analysis.get("primary_aircraft_count",previous_analysis["aircraft_count"])
+    after_primary = current_analysis.get("primary_aircraft_count",current_analysis["aircraft_count"])
+    review_candidates = previous_analysis.get("review_candidate_count",0)+current_analysis.get("review_candidate_count",0)
+    if review_candidates:
+        warnings.append("Reported totals include cross-model review candidates. The exact count change is provisional until those candidates are confirmed.")
+    warnings.append("Clouds, shadows, and unequal visible coverage may conceal aircraft; aggregate totals alone cannot establish arrivals or departures.")
     if min(previous_analysis["aircraft_count"], current_analysis["aircraft_count"]) < 2:
         warnings.append("Proximity density is weak evidence with fewer than two aircraft in either scene.")
     if "width" in previous_analysis and "width" in current_analysis:
@@ -74,6 +80,8 @@ def compare_scenes(previous_analysis, current_analysis):
     return {"aircraft_change": aircraft, "vehicle_change": vehicles, "cluster_change": pairs,
             "activity_change": activity, "density_difference": round(density_delta, 4),
             "trend_score": round(score, 4), "activity_trend": trend, "priority": priority,
+            "primary_aircraft_change":compare_counts(before_primary,after_primary,"primary_aircraft"),
+            "review_candidate_count":review_candidates,"requires_confirmation":bool(review_candidates),
             "priority_reasons": reasons, "warnings": warnings}
 
 
@@ -84,6 +92,9 @@ def format_signed(value):
 def generate_change_summary(result):
     aircraft, vehicles = result["aircraft_change"], result["vehicle_change"]
     parts = [f"Aircraft detections changed from {aircraft['previous_count']} to {aircraft['current_count']} ({format_signed(aircraft['difference'])})."]
+    if result.get("review_candidate_count"):
+        primary = result["primary_aircraft_change"]
+        parts.append(f"Totals include {result['review_candidate_count']} candidate(s) requiring manual confirmation. Primary detections changed from {primary['previous_count']} to {primary['current_count']} ({format_signed(primary['difference'])}); the exact total change is provisional.")
     if vehicles["previous_count"] or vehicles["current_count"]:
         parts.append(f"Vehicle detections changed from {vehicles['previous_count']} to {vehicles['current_count']} ({format_signed(vehicles['difference'])}).")
     activity = result["activity_change"]

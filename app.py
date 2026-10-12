@@ -135,7 +135,7 @@ async def submit(mode: str = Form(...), image: UploadFile = File(...),
                  after: UploadFile | None = File(None), confidence: float = Form(0.40),
                  tiled: bool = Form(True), vehicles: bool = Form(False),
                  proximity: float = Form(0.08), resolution: int = Form(1024),
-                 model_profile: str = Form("aerial")):
+                 model_profile: str = Form("aerial"), verify_weak: bool = Form(True)):
     if mode not in ("single", "comparison"):
         raise HTTPException(400, "Choose single or comparison mode.")
     if mode == "comparison" and after is None:
@@ -145,6 +145,7 @@ async def submit(mode: str = Form(...), image: UploadFile = File(...),
     try:
         settings = AnalysisSettings(model_profile=model_profile, aircraft_confidence=confidence, tiled=tiled,
                                     enable_vehicle_detection=vehicles,
+                                    verify_weak_detections=verify_weak,
                                     cluster_distance_fraction=proximity, inference_size=resolution)
     except ValueError as exc:
         raise HTTPException(400, str(exc))

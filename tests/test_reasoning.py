@@ -87,6 +87,18 @@ def test_unchanged_scene_is_low_priority():
     assert result["priority"] == "Low"
 
 
+def test_candidate_inclusive_change_remains_provisional():
+    from change_detection import generate_change_summary
+    before,after = scene(9,4),scene(12,5,low=1)
+    before.update(primary_aircraft_count=9,review_candidate_count=0)
+    after.update(primary_aircraft_count=11,review_candidate_count=1)
+    result = compare_scenes(before,after)
+    assert result["aircraft_change"]["difference"] == 3
+    assert result["primary_aircraft_change"]["difference"] == 2
+    assert result["requires_confirmation"]
+    assert "provisional" in generate_change_summary(result)
+
+
 def test_iou_and_class_aware_suppression():
     assert compute_iou([0,0,0,0],[0,0,0,0]) == 0
     assert compute_iou([0,0,10,10],[0,0,10,10]) == 1

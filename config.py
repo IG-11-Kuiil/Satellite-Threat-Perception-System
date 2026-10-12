@@ -33,6 +33,7 @@ class AnalysisSettings:
     inference_size: int = 1024
     tiled: bool = True
     enable_vehicle_detection: bool = False
+    verify_weak_detections: bool = True
     cluster_distance_fraction: float = 0.08
 
     def __post_init__(self):

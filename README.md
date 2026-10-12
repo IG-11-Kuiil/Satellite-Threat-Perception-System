@@ -28,7 +28,7 @@ To use another port or skip automatic browser opening:
 
 Stop the server with Ctrl+C in its terminal. It binds only to the local computer. There is no public deployment or remote inference service.
 
-The default detector is **YOLO11s-OBB pretrained on DOTA v1 aerial imagery**, replacing the general COCO detector. First use downloads `yolo11s-obb.pt` (about 19 MB) into `models/`. Later runs reuse weights and can work offline. CPU inference is supported; tiled scanning and 1280-pixel inference take longer for large images. The model loads only when an analysis starts. The interface also offers experimental YOLO26m-OBB and the legacy YOLOv8s/COCO model. Larger/newer models are not automatically more accurate on a given scene.
+The default detector is **YOLO11s-OBB pretrained on DOTA v1 aerial imagery**, replacing the general COCO detector. First use downloads `yolo11s-obb.pt` (about 19 MB) into `models/`. Cross-model candidate review, enabled by default for this profile, lazily downloads YOLO26m-OBB (about 46 MB) if unmatched weak candidates need checking. Later runs reuse both weights and can work offline. If verification fails, primary detections are preserved with a warning. CPU inference is supported; verification, tiled scanning, and 1280-pixel inference take longer for large images. Models load only when needed. The interface also offers standalone experimental YOLO26m-OBB and the legacy YOLOv8s/COCO model. Larger/newer models are not automatically more accurate on a given scene.
 
 ## Use the workspace
 
@@ -46,6 +46,10 @@ Each run has a unique directory under `outputs/runs/<uuid>/`. It contains normal
 **Detection.** YOLO11s-OBB uses DOTA v1 weights restricted to aircraft by default. For larger images, inference runs on 640 px overlapping tiles with a 320 px stride and on the full scene. Edge tiles cover the boundary without tiny trailing crops. Inference resolution is configurable at 640, 1024, or 1280 px. DOTA `plane` and COCO `airplane` map to `aircraft`. Optional DOTA `small-vehicle`/`large-vehicle` and COCO `car`/`truck`/`bus` map to `vehicle`. DOTA models return rotated polygons; COCO returns rectangular boxes. All geometry uses original-image pixel coordinates with labels such as A01 or V01. The model used is recorded in each result and report, including historical runs.
 
 **Duplicate removal.** Same-class boxes use polygon IoU when both have rotated geometry, otherwise rectangular IoU. IoU >0.35 removes duplicates. Tile-edge fragments can have low IoU even when they describe a small part of a complete aircraft, so candidates near an internal crop boundary also use overlap over the smaller box (at least 80%). Complete boxes take precedence over truncated boxes, then confidence determines priority. Containment alone does not merge ordinary nested detections. Unmatched edge candidates are retained and flagged for review. Reports record how many duplicate/invalid candidates were removed.
+
+For shifted edge fragments, the detector clips both predictions to the fragment's actual tile field of view and compares the visible geometry at the same IoU threshold. This rule applies only if the matching complete prediction crosses that tile boundary. It does not alter tile grids or thresholds to match an image's expected aircraft count.
+
+**Cross-model review.** The default aerial profile collects primary candidates down to a fixed 10% search floor while keeping the selected confidence threshold for automatic acceptance. An unmatched weak candidate is retained only if a second aerial model scores an overlapping aircraft above the selected threshold and polygon IoU exceeds the same configured overlap threshold. A secondary-only detection is not added. Retained weak candidates keep their primary score, show the supporting model score, and remain flagged for human confirmation. They are included in the candidate-inclusive total; the report separately states primary counts and marks the exact change provisional. Disable this mode with the UI checkbox or `--no-verification` for strict primary-only thresholding. This is model agreement, not a calibrated likelihood or proof of an aircraft behind cloud.
 
 **Spatial reasoning.** Aircraft centers are linked when separated by less than a configurable fraction of the image diagonal (default 8%). Connected components of two or more aircraft are proximity groups. An isolated aircraft has no neighbors. Nearby pairs and distinct groups are reported separately. Proximity density is nearby pairs divided by all possible aircraft pairs; this avoids a raw pair count that grows quadratically dominating comparisons. Relative-image distances remain consistent when the same image is resized; they do not compensate for different ground coverage, crops, or geographic resolution.
 
@@ -81,7 +85,7 @@ Both CLI runners use the same pipeline and settings as the interface:
 .\.venv\Scripts\python.exe run_change_detection.py --before "C:\imagery\before.png" --after "C:\imagery\after.png"
 ```
 
-Use `--help` for `--model aerial|aerial_large|general`, confidence, proximity, resolution, tiling, vehicles, and output-directory options. The original default paths still work if you supply `data/sample_images/example.png`, `before.png`, and `after.png`. No sample imagery is bundled. CLI runs in the default output directory also appear in UI history.
+Use `--help` for `--model aerial|aerial_large|general`, confidence, proximity, resolution, tiling, `--no-verification`, vehicles, and output-directory options. The original default paths still work if you supply `data/sample_images/example.png`, `before.png`, and `after.png`. No sample imagery is bundled. CLI runs in the default output directory also appear in UI history.
 
 ## Project structure
 
@@ -114,6 +118,8 @@ node --check web/app.js
 ```
 
 Tests cover activity boundaries, group/isolation correctness, resizing behavior, duplicate suppression, tile coverage, class mapping and offsets, symmetric priorities, bounded spatial scoring, uncertainty propagation, upload validation, EXIF orientation, multi-page rejection, artifacts, background failures, queue limits, restart recovery, and transient Windows file locks. Geometry regressions also cover contained high-confidence tile fragments, nearby rotated aircraft, unmatched edge detections, and OBB class/polygon mapping. API tests use a deterministic fake detector and require no model download. See [the scene validation record](docs/DETECTION_VALIDATION.md) for actual model comparisons and the image that motivated the aerial-model upgrade.
+
+Crop-projection and corroboration regressions additionally cover translations, multiple scales, adjacent-aircraft rejection, uncorroborated candidates, unchanged confidence scores, unavailable verifier fallback, and provisional count changes. `tools/validate_references.py` can check an external YOLO-OBB dataset without changing detector settings. Public reference results and the before/after debugging record are documented in [comparison validation](docs/COMPARISON_VALIDATION.md).
 
 Framework APIs follow the [FastAPI upload documentation](https://fastapi.tiangolo.com/tutorial/request-files/) and [Ultralytics prediction documentation](https://docs.ultralytics.com/modes/predict). Shared predictor access is serialized in accordance with [Ultralytics thread-safety guidance](https://docs.ultralytics.com/guides/yolo-thread-safe-inference).
 

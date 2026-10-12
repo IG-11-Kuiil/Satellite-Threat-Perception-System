@@ -18,6 +18,7 @@ function setBusy(value) {
   busy = value;
   document.querySelectorAll('.mode-card, .remove-file, .settings-body input, .settings-body select').forEach(el => { el.disabled = value; });
   ['first', 'second'].forEach(slot => { $(`file-${slot}`).disabled = value; $(`drop-${slot}`).classList.toggle('disabled', value); });
+  $('verify-weak').disabled = value || $('model-profile').value !== 'aerial';
   updateReady();
 }
 function chooseMode(value) {
@@ -111,6 +112,7 @@ $('run-button').addEventListener('click', async () => {
   form.append('tiled', $('tiled').checked); form.append('vehicles', $('vehicles').checked);
   form.append('resolution', $('resolution').value);
   form.append('model_profile', $('model-profile').value);
+  form.append('verify_weak', $('verify-weak').checked);
   try { const job = await api('/api/analyze', { method: 'POST', body: form }); await refreshHistory(); await watchJob(job.id); }
   catch (error) { showError(error.message || 'Could not reach the local analysis engine.'); }
   finally { setBusy(false); $('progress-panel').hidden = true; refreshHistory(); checkHealth(); }
@@ -139,12 +141,12 @@ function renderResult(data) {
     metrics.append(metric('AIRCRAFT CHANGE', signed(data.change.aircraft_change.difference), `${data.scenes.before.aircraft_count} baseline → ${latest.aircraft_count} current`),
       metric('ACTIVITY TREND', data.change.activity_trend, `${data.change.activity_change.previous_level} → ${data.change.activity_change.current_level}`),
       metric('REVIEW PRIORITY', data.change.priority, 'Based on change magnitude', data.change.priority === 'High'),
-      metric('REVIEW FLAGS', scenes.reduce((n, s) => n + s.low_confidence_count, 0), 'Aircraft detections below 40% confidence', scenes.some(s => s.low_confidence_count)));
+      metric('REVIEW FLAGS', scenes.reduce((n, s) => n + (s.review_required_count ?? s.low_confidence_count), 0), 'Weak, partial, or cross-model review candidates', scenes.some(s => (s.review_required_count ?? s.low_confidence_count))));
   } else {
     metrics.append(metric('AIRCRAFT DETECTED', latest.aircraft_count, latest.vehicles_enabled ? `${latest.vehicle_count} experimental vehicle detections` : 'Vehicle detection disabled'),
       metric('OBSERVED ACTIVITY', latest.activity_level, 'Count-based asset presence'),
       metric('PROXIMITY GROUPS', latest.spatial.group_count, `${latest.spatial.isolated_count} isolated aircraft`),
-      metric('REVIEW FLAGS', latest.low_confidence_count, 'Aircraft detections below 40% confidence', latest.low_confidence_count > 0));
+      metric('REVIEW FLAGS', latest.review_required_count ?? latest.low_confidence_count, 'Weak, partial, or cross-model review candidates', (latest.review_required_count ?? latest.low_confidence_count) > 0));
   }
   const chip = $('priority-chip');
   chip.textContent = data.change ? `${data.change.priority.toUpperCase()} PRIORITY` : 'SCENE ASSESSMENT';
@@ -172,7 +174,8 @@ function renderImages() {
     button.append(image); button.addEventListener('click', () => { $('dialog-image').src = image.src; $('dialog-title').textContent = `${sceneName(label).toUpperCase()} / ${view.toUpperCase()}`; $('image-dialog').showModal(); });
     const details = element('div', 'scene-metrics');
     details.append(element('span', '', `${scene.aircraft_count} AIRCRAFT`), element('span', '', `${scene.spatial.group_count} GROUPS`), element('span', '', `${scene.activity_level} ACTIVITY`));
-    if (scene.duplicates_removed !== undefined) details.append(element('span', '', `${scene.duplicates_removed} DUPLICATE / INVALID CANDIDATES REMOVED`));
+    if (scene.duplicates_removed !== undefined) details.append(element('span', '', `${scene.duplicates_removed} DUPLICATE CANDIDATES REMOVED`));
+    if (scene.review_candidate_count) details.append(element('span', 'review-candidate-tag', `${scene.primary_aircraft_count} PRIMARY + ${scene.review_candidate_count} REVIEW CANDIDATE(S)`));
     card.append(header, button, details); container.append(card);
   }
 }
@@ -186,6 +189,10 @@ function renderTable() {
     const cell = element('td'), confidence = element('div', `confidence-cell${detection.confidence < .4 ? ' low' : ''}`), bar = element('span', 'confidence-bar'), fill = element('i');
     fill.style.width = `${Math.round(detection.confidence * 100)}%`; bar.append(fill);
     confidence.append(bar, element('span', '', `${Math.round(detection.confidence * 100)}%`)); cell.append(confidence); row.append(cell);
+    if (detection.accepted_by === 'cross_model_review') {
+      cell.append(element('small','support-score',`${Math.round(detection.supporting_confidence*100)}% supporting model · REVIEW`));
+      cell.title = `Primary: ${detection.confidence.toFixed(3)}; ${detection.supporting_model}: ${detection.supporting_confidence.toFixed(3)}. Needs manual confirmation.`;
+    }
     row.append(element('td', '', `${Math.round((detection.bbox[0] + detection.bbox[2]) / 2)}, ${Math.round((detection.bbox[1] + detection.bbox[3]) / 2)}`)); tbody.append(row);
   }
 }
@@ -223,6 +230,7 @@ async function checkHealth() {
 }
 function updateProfile() {
   const key = $('model-profile').value, profile = healthState?.model_profiles?.[key];
+  $('verify-weak').disabled = busy || key !== 'aerial';
   $('selected-model').textContent = profileLabels[key];
   $('engine-model').textContent = profileLabels[key];
   $('profile-hint').textContent = key === 'aerial' ? 'Recommended aerial detector. Trained on DOTA v1.' : key === 'aerial_large' ? 'Larger aerial model. May produce false positives on text or watermarks; review carefully.' : 'Legacy COCO detector. Can miss unusual overhead aircraft.';
