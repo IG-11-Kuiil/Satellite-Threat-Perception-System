@@ -22,21 +22,23 @@ Project by **Shaurya Singh**. Athena explores how overhead imagery can become a 
 
 ### Full desktop workspace
 
-[![Athena full desktop workspace with workflow selection, upload slots, model controls, and run history](docs/images/athena-overview.png)](docs/images/athena-overview.png)
+[![Athena workspace with two analysis workflows, upload slots, detector controls, and run history](docs/images/athena-overview.png)](docs/images/athena-overview.png)
 
-Full workspace screenshot supplied by the project author. Click to view at full resolution. It shows the interface before loading imagery; the examples below provide closer views of setup and assessment.
+Choose single-image analysis or before/after comparison. Click any screenshot to view it at full resolution.
 
-### Upload and choose a workflow
+### Single-image aircraft detection
 
-<img src="docs/images/athena-workspace.jpg" alt="Athena workspace showing single-image and before/after workflows and two upload slots" width="560">
+[![Athena single-image result showing four rotated aircraft detections, an asset table, and a scene assessment](docs/images/athena-single-analysis.png)](docs/images/athena-single-analysis.png)
 
-### Review the evidence and uncertainty
+This run shows **four aircraft detections**, rotated boxes, model scores, and a count-based MEDIUM presence band. Athena detects generic aircraft; it does not identify aircraft types or establish military intent.
 
-<img src="docs/images/athena-assessment.jpg" alt="Actual Athena comparison summary showing nine to twelve detections, eleven primary after detections, one review candidate, and a provisional change of two to three" width="520">
+### Before/after change detection
 
-These are captures of the running app. The assessment capture shows one tested comparison: **9 aircraft before and 12 candidate-inclusive detections after**, including **one candidate requiring confirmation**. The primary-only counts are **9 to 11**. This example is not a measured accuracy rate or evidence of actual aircraft movement. The published screenshots show the interface and assessment text; uploaded source imagery is not bundled.
+[![Athena comparison result showing nine aircraft before and twelve candidate-inclusive detections after, with one review candidate](docs/images/athena-change-detection.png)](docs/images/athena-change-detection.png)
 
-**Demo imagery:** local validation used user-supplied Google Earth screenshots and a separately sourced image bearing a Maxar watermark. Their original publication links and reuse permissions have not been verified, so those source images and imagery-bearing result screenshots are not included in this repository. A publicly visible image or watermark is not itself a reuse license. For future image-based demos, use imagery whose terms permit the intended publication and preserve the required credits. [Google's imagery guidelines](https://about.google/brand-resource-center/products-and-services/geo-guidelines/) require Google and relevant provider attribution and restrict commercial/promotional Google Earth use. The project's software license does not license third-party imagery. Base identities and acquisition dates are not independently verified by Athena.
+This tested pair shows **9 aircraft before and 12 candidate-inclusive detections after**, including **one candidate requiring confirmation**. Primary-only counts are **9 to 11**; the known-candidate change range is **+2 to +3**. This is one debugging example, not a measured accuracy rate or proof of aircraft arrivals or departures.
+
+These three screenshots were supplied by the project author and show actual app output. Standalone input imagery is not bundled. Third-party imagery remains subject to its own terms; see [imagery source notes](THIRD_PARTY_NOTICES.md#imagery-inside-documentation-screenshots).
 
 ## Try the workflow
 

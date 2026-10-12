@@ -21,3 +21,9 @@ FastAPI, Uvicorn, python-multipart, OpenCV, NumPy, Pillow, PyTorch, torchvision,
 Athena revisions through `a792e613fa24bae22dea69469bcff280d8752e03` carried an MIT license. Existing permissions remain for that code. The unmodified copyright and license text is retained in [docs/licenses/MIT-previous.txt](docs/licenses/MIT-previous.txt); the integrated application is now offered as a whole under AGPL-3.0-only without retracting those separately granted MIT permissions. The prospective rights-reserved notice introduced afterward has been superseded for this release; see [NOTICE](NOTICE).
 
 Public GitHub viewing and forking are governed by [GitHub's platform terms and licensing guidance](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/licensing-a-repository). The repository remains public with source available under the stated licenses.
+
+## Imagery inside documentation screenshots
+
+Single-image screenshot: underlying satellite imagery credited to **Maxar**, based on the watermark visible in the original supplied image. Before/after screenshot: underlying imagery sourced by the author from **Google Earth (Google and its imagery providers)**. Original publication links, complete provider credits, and reuse permissions have not been verified. These source notes do not claim ownership, permission, or completed attribution compliance. See [Google's imagery and attribution guidelines](https://about.google/brand-resource-center/products-and-services/geo-guidelines/).
+
+These underlying images are not relicensed under Athena's AGPL grant. The project-author UI and application output do not override third-party imagery rights. Personal-project status and cropped watermarks do not automatically authorize redistribution. Preserve the original applicable notices and consult the source-specific terms before reusing imagery-bearing screenshots.
