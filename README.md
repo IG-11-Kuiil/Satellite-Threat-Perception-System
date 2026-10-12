@@ -28,7 +28,7 @@ Choose single-image analysis or before/after comparison. Click any screenshot to
 
 ### Single-image aircraft detection
 
-[![Athena single-image result showing four rotated aircraft detections, an asset table, and a scene assessment](docs/images/athena-single-analysis.png)](docs/images/athena-single-analysis.png)
+[![Athena single-image result showing four rotated aircraft detections in a fresh capture without the horizontal green artifact](docs/images/athena-single-analysis-clean.jpg)](docs/images/athena-single-analysis-clean.jpg)
 
 This run shows **four aircraft detections**, rotated boxes, model scores, and a count-based MEDIUM presence band. Athena detects generic aircraft; it does not identify aircraft types or establish military intent.
 
@@ -38,7 +38,7 @@ This run shows **four aircraft detections**, rotated boxes, model scores, and a 
 
 This tested pair shows **9 aircraft before and 12 candidate-inclusive detections after**, including **one candidate requiring confirmation**. Primary-only counts are **9 to 11**; the known-candidate change range is **+2 to +3**. This is one debugging example, not a measured accuracy rate or proof of aircraft arrivals or departures.
 
-These three screenshots were supplied by the project author and show actual app output. Standalone input imagery is not bundled. Third-party imagery remains subject to its own terms; see [imagery source notes](THIRD_PARTY_NOTICES.md#imagery-inside-documentation-screenshots).
+The workspace and comparison screenshots were supplied by the project author; the single-image screenshot is a fresh capture of the same completed four-aircraft run. All show actual app output. Standalone input imagery is not bundled. Third-party imagery remains subject to its own terms; see [imagery source notes](THIRD_PARTY_NOTICES.md#imagery-inside-documentation-screenshots).
 
 ## Try the workflow
 
