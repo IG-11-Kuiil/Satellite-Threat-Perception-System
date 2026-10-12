@@ -88,6 +88,8 @@ To use another port or skip automatic browser opening:
 
 Stop the server with Ctrl+C in its terminal. It binds only to the local computer. There is no public deployment or remote inference service.
 
+The original prototype used YOLOv8, which remains available through the **Legacy detector profile**. The current default uses **YOLO11s-OBB** for orientation-aware detection in overhead imagery. Legacy uses the repaired shared pipeline rather than the untouched original implementation.
+
 The default detector is **YOLO11s-OBB pretrained on DOTA v1 aerial imagery**, replacing the general COCO detector. First use downloads `yolo11s-obb.pt` (about 19 MB) into `models/`. Cross-model candidate review, enabled by default for this profile, lazily downloads YOLO26m-OBB (about 46 MB) if unmatched weak candidates need checking. Later runs reuse both weights and can work offline. If verification fails, primary detections are preserved with a warning. CPU inference is supported; verification, tiled scanning, and 1280-pixel inference take longer for large images. Models load only when needed. The interface also offers standalone experimental YOLO26m-OBB and the legacy YOLOv8s/COCO model. Larger/newer models are not automatically more accurate on a given scene.
 
 ## Use the workspace
