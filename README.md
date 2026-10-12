@@ -20,6 +20,12 @@ Project by **Shaurya Singh**. Athena explores how overhead imagery can become a 
 
 ## Screenshots
 
+### Full desktop workspace
+
+[![Athena full desktop workspace with workflow selection, upload slots, model controls, and run history](docs/images/athena-overview.png)](docs/images/athena-overview.png)
+
+Full workspace screenshot supplied by the project author. Click to view at full resolution. It shows the interface before loading imagery; the examples below provide closer views of setup and assessment.
+
 ### Upload and choose a workflow
 
 <img src="docs/images/athena-workspace.jpg" alt="Athena workspace showing single-image and before/after workflows and two upload slots" width="560">
@@ -28,7 +34,9 @@ Project by **Shaurya Singh**. Athena explores how overhead imagery can become a 
 
 <img src="docs/images/athena-assessment.jpg" alt="Actual Athena comparison summary showing nine to twelve detections, eleven primary after detections, one review candidate, and a provisional change of two to three" width="520">
 
-These are captures of the running app. The second shows one tested comparison: **9 aircraft before and 12 candidate-inclusive detections after**, including **one candidate requiring confirmation**. The primary-only counts are **9 to 11**. This example is not a measured accuracy rate or evidence of actual aircraft movement. The published screenshots show the interface and assessment text; uploaded source imagery is not bundled.
+These are captures of the running app. The assessment capture shows one tested comparison: **9 aircraft before and 12 candidate-inclusive detections after**, including **one candidate requiring confirmation**. The primary-only counts are **9 to 11**. This example is not a measured accuracy rate or evidence of actual aircraft movement. The published screenshots show the interface and assessment text; uploaded source imagery is not bundled.
+
+**Demo imagery:** local validation used user-supplied Google Earth screenshots and a separately sourced image bearing a Maxar watermark. Their original publication links and reuse permissions have not been verified, so those source images and imagery-bearing result screenshots are not included in this repository. A publicly visible image or watermark is not itself a reuse license. For future image-based demos, use imagery whose terms permit the intended publication and preserve the required credits. [Google's imagery guidelines](https://about.google/brand-resource-center/products-and-services/geo-guidelines/) require Google and relevant provider attribution and restrict commercial/promotional Google Earth use. The project's software license does not license third-party imagery. Base identities and acquisition dates are not independently verified by Athena.
 
 ## Try the workflow
 
